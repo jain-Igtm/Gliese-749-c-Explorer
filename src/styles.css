@@ -1,0 +1,221 @@
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #020509;
+  color: #dff5ff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  touch-action: none;
+}
+
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  image-rendering: auto;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(92, 165, 210, 0.18), transparent 38%),
+    linear-gradient(180deg, rgba(1, 4, 8, 0.94), rgba(0, 0, 0, 0.98));
+}
+
+.wake-card {
+  width: min(590px, calc(100vw - 34px));
+  padding: 24px;
+  border: 1px solid rgba(180, 230, 255, 0.25);
+  border-radius: 18px;
+  background: rgba(3, 10, 18, 0.78);
+  box-shadow: 0 35px 90px rgba(0, 0, 0, 0.55), inset 0 0 40px rgba(110, 200, 255, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #80bed7;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.wake-card h1 {
+  margin: 0 0 10px;
+  font-size: 28px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wake-card p {
+  margin: 0 0 15px;
+  line-height: 1.5;
+  color: #bad6e4;
+  font-size: 14px;
+}
+
+.controls {
+  color: #d8f4ff !important;
+}
+
+#wakeButton {
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: #031018;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #9cecff, #e6fbff);
+  box-shadow: 0 0 35px rgba(135, 220, 255, 0.24);
+}
+
+#hud {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  background: radial-gradient(circle at center, transparent 45%, rgba(0, 8, 12, 0.36) 100%);
+}
+
+.panel {
+  position: absolute;
+  border: 1px solid rgba(170, 225, 255, 0.22);
+  border-radius: 14px;
+  background: rgba(2, 8, 14, 0.58);
+  backdrop-filter: blur(10px);
+  color: #bad4e0;
+  font-size: 12px;
+  line-height: 1.42;
+  box-shadow: inset 0 0 22px rgba(80, 190, 255, 0.04);
+}
+
+.title-panel {
+  top: 16px;
+  left: 16px;
+  max-width: 370px;
+  padding: 12px 14px;
+}
+
+.title-panel strong {
+  display: block;
+  margin-bottom: 5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #f2fcff;
+}
+
+.status-panel {
+  top: 16px;
+  right: 16px;
+  width: 226px;
+  padding: 12px 14px;
+}
+
+.status-panel strong {
+  display: block;
+  color: #f2fcff;
+  margin-bottom: 8px;
+}
+
+.meter {
+  margin-top: 9px;
+}
+
+.meter div {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.meter i {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.meter b {
+  display: block;
+  height: 100%;
+  width: 70%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #69d8ff, #d8fbff);
+}
+
+.log-panel {
+  left: 16px;
+  bottom: 16px;
+  width: min(520px, calc(100vw - 32px));
+  padding: 12px 14px;
+  background: rgba(2, 8, 14, 0.64);
+}
+
+.reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  opacity: 0.5;
+}
+
+.reticle::before,
+.reticle::after {
+  content: "";
+  position: absolute;
+  background: rgba(230, 250, 255, 0.75);
+  box-shadow: 0 0 10px rgba(140, 220, 255, 0.7);
+}
+
+.reticle::before { left: 10px; top: 0; width: 2px; height: 22px; }
+.reticle::after { top: 10px; left: 0; height: 2px; width: 22px; }
+
+#touchControls {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: none;
+  pointer-events: none;
+}
+
+.stick {
+  position: absolute;
+  bottom: 24px;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 1px solid rgba(210, 245, 255, 0.18);
+  background: rgba(5, 18, 28, 0.34);
+  pointer-events: auto;
+  backdrop-filter: blur(5px);
+}
+
+#moveStick { left: 24px; }
+#lookStick { right: 24px; }
+
+.nub {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  left: 41px;
+  top: 41px;
+  background: rgba(220, 250, 255, 0.22);
+  box-shadow: 0 0 20px rgba(120, 220, 255, 0.22);
+}
+
+@media (max-width: 760px) {
+  #touchControls { display: block; }
+  .status-panel { top: auto; right: 14px; bottom: 176px; width: 176px; }
+  .log-panel { display: none; }
+  .title-panel { max-width: calc(100vw - 32px); }
+}
