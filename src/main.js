@@ -1,14 +1,6 @@
-import {
-  makeNoiseTexture,
-  makeCockpitTexture,
-  makeGlassTexture,
-  makeMineralTexture,
-  patternFrom
-} from './textures.js';
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-
 const wakePanel = document.getElementById('wakePanel');
 const wakeButton = document.getElementById('wakeButton');
 const sealText = document.getElementById('sealText');
@@ -18,357 +10,298 @@ const sealFill = document.getElementById('sealFill');
 const signalFill = document.getElementById('signalFill');
 const scanFill = document.getElementById('scanFill');
 const log = document.getElementById('log');
-
 const moveStick = document.getElementById('moveStick');
 const lookStick = document.getElementById('lookStick');
 
-let w = 0;
-let h = 0;
-let dpr = 1;
 let running = false;
 let lastTime = performance.now();
+let reticleTarget = null;
+let scanHold = 0;
 
-const textures = {
-  ground: makeNoiseTexture(256, 256, [74, 62, 51], 42, 1),
-  darkerGround: makeNoiseTexture(256, 256, [44, 42, 39], 34, 1),
-  cockpit: makeCockpitTexture(),
-  glass: makeGlassTexture(),
-  mineral: makeMineralTexture()
-};
-
-let patterns = {};
-
-const player = {
-  x: 0,
-  z: 0,
-  yaw: 0,
-  speed: 0,
-  bob: 0
-};
-
-const keys = new Set();
-const pointer = { dragging: false, lastX: 0, lastY: 0 };
 const touch = {
-  move: { id: null, x: 0, y: 0, active: false },
-  look: { id: null, x: 0, y: 0, active: false }
+  move: { id: null, x: 0, y: 0 },
+  look: { id: null, x: 0, y: 0 }
 };
 
-const wind = { phase: 0, load: 0.76, gust: 0 };
-const scanner = { target: null, hold: 0, required: 1.15 };
+const world = {
+  yaw: 0,
+  position: new THREE.Vector3(0, 1.4, 10),
+  velocity: new THREE.Vector3(),
+  windPhase: 0,
+  gust: 0.5
+};
 
-const scanTargets = [
-  { x: -44, z: -90, label: 'blue-white mineral bloom', scanned: false },
-  { x: 34, z: -115, label: 'pressure mast wreckage', scanned: false },
-  { x: 92, z: -170, label: 'basalt rib formation', scanned: false },
-  { x: -120, z: -210, label: 'ice-salt seep', scanned: false },
-  { x: 12, z: -260, label: 'navigation pylon', scanned: false },
-  { x: 165, z: -320, label: 'wind-polished ridge', scanned: false }
-];
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x071018);
+scene.fog = new THREE.FogExp2(0x8b6b59, 0.012);
 
-const messages = [
-  'COCKPIT LOG: exterior conditions meet HZ-3 tolerance. That is not the same thing as safe.',
-  'Cabin microphones detect sustained grit impact across the forward glass.',
-  'Atmospheric mix remains within tolerance. Filtration system dislikes the wording.',
-  'Vehicle frame flexing under lateral wind load. No breach detected.',
-  'Mapping confidence drops beyond the visible ridge line.'
-];
-let messageIndex = 0;
-let messageTimer = 0;
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 520);
+camera.position.copy(world.position);
 
-function resize() {
-  dpr = Math.min(window.devicePixelRatio || 1, 1.6);
-  w = Math.floor(window.innerWidth);
-  h = Math.floor(window.innerHeight);
-  canvas.width = Math.floor(w * dpr);
-  canvas.height = Math.floor(h * dpr);
-  canvas.style.width = `${w}px`;
-  canvas.style.height = `${h}px`;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  patterns = {
-    ground: patternFrom(ctx, textures.ground),
-    darkerGround: patternFrom(ctx, textures.darkerGround),
-    cockpit: patternFrom(ctx, textures.cockpit),
-    glass: patternFrom(ctx, textures.glass)
-  };
-}
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-function terrainHeight(x, z) {
-  return Math.sin(x * 0.035) * 8 + Math.cos(z * 0.028) * 10 + Math.sin((x + z) * 0.017) * 7;
-}
+const hemi = new THREE.HemisphereLight(0xaec7d0, 0x4b362b, 1.35);
+scene.add(hemi);
 
-function drawSky(t) {
-  const sky = ctx.createLinearGradient(0, 0, 0, h * 0.7);
-  sky.addColorStop(0, '#061019');
-  sky.addColorStop(0.46, '#18282f');
-  sky.addColorStop(1, '#755848');
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, w, h);
+const star = new THREE.DirectionalLight(0xffb18a, 2.4);
+star.position.set(-40, 60, 26);
+scene.add(star);
 
-  const starX = w * (0.64 + Math.sin(player.yaw) * 0.07);
-  const starY = h * 0.27;
-  const glow = ctx.createRadialGradient(starX, starY, 2, starX, starY, h * 0.34);
-  glow.addColorStop(0, 'rgba(255, 210, 184, 0.54)');
-  glow.addColorStop(0.16, 'rgba(255, 142, 96, 0.20)');
-  glow.addColorStop(1, 'rgba(255, 138, 96, 0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, w, h * 0.66);
+const cabinLight = new THREE.PointLight(0x8eeaff, 1.3, 16);
+cabinLight.position.set(0, 2.2, 4.6);
+scene.add(cabinLight);
 
-  ctx.globalAlpha = 0.12;
-  for (let i = 0; i < 36; i++) {
-    const y = ((i * 47 + t * 18) % (h * 0.62));
-    ctx.fillStyle = 'rgba(210, 230, 235, 0.10)';
-    ctx.fillRect(0, y, w, 1);
+const materials = {
+  ground: new THREE.MeshStandardMaterial({ color: 0x7b6250, roughness: 0.94, metalness: 0.02, map: makeDustTexture() }),
+  darkGround: new THREE.MeshStandardMaterial({ color: 0x4e463d, roughness: 1, metalness: 0.02 }),
+  glass: new THREE.MeshStandardMaterial({ color: 0x9bdfff, transparent: true, opacity: 0.15, roughness: 0.25, metalness: 0.05, side: THREE.DoubleSide }),
+  frame: new THREE.MeshStandardMaterial({ color: 0x071217, roughness: 0.72, metalness: 0.34, map: makePanelTexture() }),
+  glow: new THREE.MeshBasicMaterial({ color: 0x7eeaff, transparent: true, opacity: 0.78 }),
+  rockA: new THREE.MeshStandardMaterial({ color: 0x65584d, roughness: 0.9, metalness: 0.02 }),
+  rockB: new THREE.MeshStandardMaterial({ color: 0x3e3b36, roughness: 0.95, metalness: 0.01 })
+};
+
+buildPlanetSurface();
+buildCockpit();
+buildWind();
+const scanTargets = buildScanTargets();
+
+function buildPlanetSurface() {
+  const groundGeo = new THREE.PlaneGeometry(420, 420, 90, 90);
+  groundGeo.rotateX(-Math.PI / 2);
+  const pos = groundGeo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+    const y = Math.sin(x * 0.055) * 0.7 + Math.cos(z * 0.042) * 0.9 + Math.sin((x + z) * 0.027) * 0.55;
+    pos.setY(i, y);
   }
-  ctx.globalAlpha = 1;
-}
+  groundGeo.computeVertexNormals();
+  const ground = new THREE.Mesh(groundGeo, materials.ground);
+  ground.position.z = -115;
+  scene.add(ground);
 
-function drawTerrain() {
-  const horizon = h * 0.54 + Math.sin(player.bob) * 2.5;
-  drawDistantRidges(horizon);
+  for (let i = 0; i < 64; i++) {
+    const group = new THREE.Group();
+    const x = seededRange(i, -110, 110);
+    const z = seededRange(i * 17, -230, -18);
+    const height = seededRange(i * 41, 1.1, 5.6);
+    const radius = seededRange(i * 19, 1.2, 4.6);
+    const geo = new THREE.CylinderGeometry(radius * 0.55, radius, height, 7 + (i % 3), 1);
+    const rock = new THREE.Mesh(geo, i % 2 ? materials.rockA : materials.rockB);
+    rock.position.set(x, height / 2 - 0.2, z);
+    rock.rotation.y = seededRange(i * 13, 0, Math.PI);
+    rock.scale.x = seededRange(i * 7, 0.7, 1.45);
+    rock.scale.z = seededRange(i * 23, 0.65, 1.35);
+    group.add(rock);
 
-  for (let y = Math.floor(horizon); y < h; y += 2) {
-    const depth = (y - horizon) / Math.max(1, h - horizon);
-    const distance = 18 / Math.pow(depth + 0.04, 1.22);
-    const leftRay = player.yaw - 0.82;
-    const rightRay = player.yaw + 0.82;
-    const shade = 1 - depth * 0.68;
-
-    ctx.globalAlpha = 0.95;
-    ctx.fillStyle = depth > 0.45 ? patterns.ground : patterns.darkerGround;
-    const offset = Math.floor((Math.sin(player.x * 0.04 + y * 0.022) + Math.cos(player.z * 0.02 + y * 0.015)) * 28);
-    ctx.save();
-    ctx.translate(offset, 0);
-    ctx.fillRect(-256, y, w + 512, 2);
-    ctx.restore();
-
-    ctx.globalAlpha = 0.14 + depth * 0.18;
-    ctx.fillStyle = `rgba(255, 214, 183, ${0.08 + depth * 0.11})`;
-    ctx.fillRect(0, y, w, 2);
-
-    const ridge = terrainHeight(player.x + Math.sin(leftRay) * distance, player.z + Math.cos(rightRay) * distance);
-    if (ridge > 11 && y % 6 === 0) {
-      ctx.globalAlpha = 0.12 * shade;
-      ctx.fillStyle = '#dde9e8';
-      ctx.fillRect(0, y, w, 1);
+    if (i % 6 === 0) {
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.55, 8, 5), materials.darkGround);
+      cap.position.set(x + radius * 0.08, height + 0.1, z);
+      cap.scale.y = 0.22;
+      group.add(cap);
     }
+    scene.add(group);
   }
 
-  ctx.globalAlpha = 1;
-}
-
-function drawDistantRidges(horizon) {
-  for (let band = 0; band < 5; band++) {
-    const baseY = horizon - 48 + band * 18;
-    ctx.beginPath();
-    ctx.moveTo(0, h);
-    for (let x = -20; x <= w + 20; x += 10) {
-      const world = (x - w / 2) * 0.02 + player.yaw * 6 + band * 19;
-      const y = baseY + Math.sin(world * 1.7) * (11 + band * 2.5) + Math.cos(world * 0.8) * 17;
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(w, h);
-    ctx.closePath();
-    ctx.globalAlpha = 0.20 - band * 0.024;
-    ctx.fillStyle = band % 2 ? '#3f3d38' : '#5b5146';
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
-
-function drawTargets(dt) {
-  const horizon = h * 0.54;
-  let candidate = null;
-  let bestDistance = Infinity;
-
-  for (const target of scanTargets) {
-    const dx = target.x - player.x;
-    const dz = target.z - player.z;
-    const distance = Math.hypot(dx, dz);
-    if (distance > 360) continue;
-
-    const angle = Math.atan2(dx, dz) - player.yaw;
-    const wrapped = Math.atan2(Math.sin(angle), Math.cos(angle));
-    if (Math.abs(wrapped) > 0.86) continue;
-
-    const sx = w / 2 + wrapped * w * 0.62;
-    const sy = horizon + 2300 / (distance + 18) + terrainHeight(target.x, target.z) * 0.9;
-    const size = Math.max(13, 1700 / (distance + 28));
-
-    ctx.globalAlpha = target.scanned ? 0.12 : 0.58;
-    ctx.drawImage(textures.mineral, sx - size / 2, sy - size / 2, size, size);
-
-    if (!target.scanned && Math.abs(sx - w / 2) < 38 && Math.abs(sy - h * 0.49) < 72 && distance < bestDistance) {
-      candidate = target;
-      bestDistance = distance;
-    }
+  for (let i = 0; i < 9; i++) {
+    const ridgeGeo = new THREE.BoxGeometry(52, 6 + i * 0.4, 6);
+    const ridge = new THREE.Mesh(ridgeGeo, i % 2 ? materials.rockA : materials.rockB);
+    ridge.position.set(-145 + i * 38, 1.8, -245 - (i % 3) * 15);
+    ridge.rotation.y = 0.22 + i * 0.08;
+    ridge.rotation.z = seededRange(i, -0.08, 0.08);
+    scene.add(ridge);
   }
 
-  ctx.globalAlpha = 1;
+  const starDisk = new THREE.Mesh(new THREE.SphereGeometry(11, 32, 16), new THREE.MeshBasicMaterial({ color: 0xff9b76, transparent: true, opacity: 0.86 }));
+  starDisk.position.set(-80, 54, -180);
+  scene.add(starDisk);
 
-  if (!running) return;
+  const starGlow = new THREE.Mesh(new THREE.SphereGeometry(28, 32, 16), new THREE.MeshBasicMaterial({ color: 0xff825f, transparent: true, opacity: 0.12 }));
+  starGlow.position.copy(starDisk.position);
+  scene.add(starGlow);
+}
 
-  if (candidate) {
-    if (scanner.target !== candidate) {
-      scanner.target = candidate;
-      scanner.hold = 0;
-    }
-    scanner.hold += dt;
-    drawScanRing(scanner.hold / scanner.required);
-    if (scanner.hold >= scanner.required) {
-      candidate.scanned = true;
-      scanner.target = null;
-      scanner.hold = 0;
-      log.textContent = `SCAN COMPLETE: ${candidate.label}. Map confidence improved.`;
-    }
-  } else {
-    scanner.target = null;
-    scanner.hold = Math.max(0, scanner.hold - dt * 2);
+function buildCockpit() {
+  const cockpit = new THREE.Group();
+  cockpit.name = 'cockpit';
+  camera.add(cockpit);
+  scene.add(camera);
+
+  const dash = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.9, 1.6), materials.frame);
+  dash.position.set(0, -1.05, -2.6);
+  dash.rotation.x = -0.09;
+  cockpit.add(dash);
+
+  const lowerPanel = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.55, 0.18), materials.frame);
+  lowerPanel.position.set(0, -0.62, -2.95);
+  cockpit.add(lowerPanel);
+
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(5.7, 3.7), materials.glass);
+  glass.position.set(0, 0.26, -3.25);
+  cockpit.add(glass);
+
+  const top = new THREE.Mesh(new THREE.BoxGeometry(6.25, 0.24, 0.22), materials.frame);
+  top.position.set(0, 2.12, -3.18);
+  cockpit.add(top);
+
+  const left = new THREE.Mesh(new THREE.BoxGeometry(0.25, 3.7, 0.24), materials.frame);
+  left.position.set(-3.05, 0.25, -3.12);
+  left.rotation.z = -0.08;
+  cockpit.add(left);
+
+  const right = left.clone();
+  right.position.x = 3.05;
+  right.rotation.z = 0.08;
+  cockpit.add(right);
+
+  const bottom = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.26, 0.24), materials.frame);
+  bottom.position.set(0, -1.58, -3.14);
+  cockpit.add(bottom);
+
+  const centerConsole = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.42, 0.55), materials.frame);
+  centerConsole.position.set(0, -0.96, -2.0);
+  centerConsole.rotation.x = -0.2;
+  cockpit.add(centerConsole);
+
+  const labels = [ [-0.72, 'ATM'], [0, 'WND'], [0.72, 'MAP'] ];
+  for (const [x] of labels) {
+    const screen = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.28, 0.04), materials.glow);
+    screen.position.set(x, -0.92, -1.69);
+    cockpit.add(screen);
+  }
+
+  for (let i = 0; i < 18; i++) {
+    const scratch = new THREE.Mesh(new THREE.PlaneGeometry(seededRange(i, 0.35, 1.4), 0.012), new THREE.MeshBasicMaterial({ color: 0xdaf7ff, transparent: true, opacity: seededRange(i * 9, 0.05, 0.14), side: THREE.DoubleSide }));
+    scratch.position.set(seededRange(i * 4, -2.4, 2.4), seededRange(i * 12, -0.9, 1.65), -3.235);
+    scratch.rotation.z = seededRange(i * 5, -0.16, 0.08);
+    cockpit.add(scratch);
   }
 }
 
-function drawScanRing(progress) {
-  const cx = w / 2;
-  const cy = h * 0.49;
-  const radius = 24;
-  ctx.save();
-  ctx.strokeStyle = 'rgba(210, 248, 255, 0.30)';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, progress));
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawWind(t) {
-  wind.phase += 0.016 + wind.gust * 0.02;
-  wind.gust = 0.5 + 0.5 * Math.sin(t * 0.55) + Math.random() * 0.1;
-
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  for (let i = 0; i < 118; i++) {
-    const y = (i * 37 + t * (84 + wind.gust * 120)) % h;
-    const x = (i * 193 + t * 175 + Math.sin(i) * 90) % (w + 270) - 170;
-    const len = 45 + wind.gust * 92 + Math.random() * 28;
-    ctx.globalAlpha = 0.023 + wind.gust * 0.04;
-    ctx.strokeStyle = '#d9eef3';
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + len, y - 8 - wind.gust * 12);
-    ctx.stroke();
+function buildWind() {
+  const windGeo = new THREE.BufferGeometry();
+  const count = 900;
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    positions[i * 3] = seededRange(i * 3, -80, 80);
+    positions[i * 3 + 1] = seededRange(i * 5, 0.4, 22);
+    positions[i * 3 + 2] = seededRange(i * 7, -180, 22);
   }
-  ctx.restore();
-  ctx.globalAlpha = 1;
+  windGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const windMat = new THREE.PointsMaterial({ color: 0xd8eef3, size: 0.045, transparent: true, opacity: 0.45, depthWrite: false });
+  const windPoints = new THREE.Points(windGeo, windMat);
+  windPoints.name = 'wind';
+  scene.add(windPoints);
 }
 
-function drawCockpit(t) {
-  const bob = Math.sin(player.bob) * 3;
-  const glassX = w * 0.10;
-  const glassY = h * 0.19;
-  const glassW = w * 0.80;
-  const glassH = h * 0.55;
+function buildScanTargets() {
+  const data = [
+    [-14, -36, 'blue-white mineral bloom'],
+    [18, -58, 'pressure mast wreckage'],
+    [-32, -82, 'ice-salt seep'],
+    [44, -112, 'basalt rib formation'],
+    [4, -146, 'navigation pylon'],
+    [68, -184, 'wind-polished ridge']
+  ];
 
-  ctx.save();
-  ctx.translate(0, bob);
-
-  ctx.fillStyle = patterns.glass;
-  roundedRect(glassX, glassY, glassW, glassH, 26, true, false);
-  ctx.strokeStyle = 'rgba(160, 215, 235, 0.16)';
-  ctx.lineWidth = 2;
-  roundedRect(glassX, glassY, glassW, glassH, 26, false, true);
-
-  ctx.strokeStyle = 'rgba(160, 215, 235, 0.06)';
-  ctx.lineWidth = 12;
-  roundedRect(glassX - 8, glassY - 8, glassW + 16, glassH + 16, 34, false, true);
-
-  ctx.fillStyle = patterns.cockpit;
-  ctx.beginPath();
-  ctx.moveTo(0, h);
-  ctx.lineTo(0, h * 0.70);
-  ctx.lineTo(w * 0.23, h * 0.75);
-  ctx.lineTo(w * 0.34, h);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(w, h);
-  ctx.lineTo(w, h * 0.70);
-  ctx.lineTo(w * 0.77, h * 0.75);
-  ctx.lineTo(w * 0.66, h);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillRect(0, h * 0.82, w, h * 0.18);
-
-  ctx.fillStyle = 'rgba(4, 11, 16, 0.78)';
-  roundedRect(w * 0.28, h * 0.83, w * 0.44, h * 0.085, 14, true, false);
-
-  drawInstrument(w * 0.37, h * 0.865, 'ATM', 'OK', t);
-  drawInstrument(w * 0.50, h * 0.865, 'WIND', 'BAD', t + 10);
-  drawInstrument(w * 0.63, h * 0.865, 'MAP', 'LOW', t + 20);
-
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.24)';
-  ctx.fillRect(0, 0, w, h);
-
-  ctx.restore();
+  return data.map(([x, z, label], index) => {
+    const group = new THREE.Group();
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.48, 16, 10), new THREE.MeshBasicMaterial({ color: 0x78eaff, transparent: true, opacity: 0.82 }));
+    const halo = new THREE.Mesh(new THREE.SphereGeometry(1.25, 16, 10), new THREE.MeshBasicMaterial({ color: 0x78eaff, transparent: true, opacity: 0.11 }));
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, 1.2, 8), new THREE.MeshStandardMaterial({ color: 0x8cefff, roughness: 0.45, metalness: 0.3 }));
+    stem.position.y = -0.65;
+    group.add(halo, orb, stem);
+    group.position.set(x, 1.4, z);
+    group.userData = { label, scanned: false, index };
+    scene.add(group);
+    return group;
+  });
 }
 
-function drawInstrument(x, y, label, value, t) {
-  const boxW = Math.min(76, w * 0.18);
-  const boxH = 46;
-  ctx.save();
-  ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(92, 222, 255, 0.07)';
-  roundedRect(x - boxW / 2, y - boxH / 2, boxW, boxH, 8, true, false);
-  ctx.strokeStyle = 'rgba(150, 236, 255, 0.16)';
-  roundedRect(x - boxW / 2, y - boxH / 2, boxW, boxH, 8, false, true);
-  ctx.fillStyle = `rgba(192, 248, 255, ${0.55 + Math.sin(t * 2) * 0.08})`;
-  ctx.font = '10px system-ui';
-  ctx.fillText(label, x, y - 5);
-  ctx.font = '11px system-ui';
-  ctx.fillText(value, x, y + 12);
-  ctx.restore();
-}
-
-function roundedRect(x, y, width, height, radius, fill, stroke) {
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + width, y, x + width, y + height, radius);
-  ctx.arcTo(x + width, y + height, x, y + height, radius);
-  ctx.arcTo(x, y + height, x, y, radius);
-  ctx.arcTo(x, y, x + width, y, radius);
-  ctx.closePath();
-  if (fill) ctx.fill();
-  if (stroke) ctx.stroke();
-}
-
-function update(dt) {
+function update(dt, t) {
   const forward = touch.move.y;
   const strafe = touch.move.x;
-  const moveSpeed = 36;
-  const sin = Math.sin(player.yaw);
-  const cos = Math.cos(player.yaw);
+  world.yaw -= touch.look.x * dt * 2.25;
 
-  player.x += (sin * forward + cos * strafe) * moveSpeed * dt;
-  player.z += (cos * forward - sin * strafe) * moveSpeed * dt;
-  player.yaw += touch.look.x * dt * 1.95;
-  player.speed = Math.min(1, Math.abs(forward) + Math.abs(strafe));
-  player.bob += dt * (1.4 + player.speed * 5.6);
+  const dir = new THREE.Vector3(Math.sin(world.yaw), 0, Math.cos(world.yaw));
+  const side = new THREE.Vector3(Math.cos(world.yaw), 0, -Math.sin(world.yaw));
+  world.velocity.copy(dir.multiplyScalar(-forward)).add(side.multiplyScalar(strafe)).multiplyScalar(16 * dt);
+  world.position.add(world.velocity);
+  world.position.x = THREE.MathUtils.clamp(world.position.x, -92, 92);
+  world.position.z = THREE.MathUtils.clamp(world.position.z, -210, 18);
 
-  messageTimer += dt;
-  if (messageTimer > 8 && running) {
-    messageTimer = 0;
-    messageIndex = (messageIndex + 1) % messages.length;
-    log.textContent = messages[messageIndex];
+  const bob = Math.sin(t * 4.2) * Math.min(0.045, world.velocity.length() * 0.09);
+  camera.position.set(world.position.x, 1.55 + bob, world.position.z);
+  camera.rotation.set(-0.03 + bob * 0.2, world.yaw, 0);
+
+  world.gust = 0.45 + Math.sin(t * 0.7) * 0.25 + Math.sin(t * 2.1) * 0.08;
+  world.windPhase += dt * (7 + world.gust * 10);
+  const wind = scene.getObjectByName('wind');
+  const positions = wind.geometry.attributes.position;
+  for (let i = 0; i < positions.count; i++) {
+    let x = positions.getX(i) + dt * (12 + world.gust * 18);
+    let z = positions.getZ(i) + dt * (2 + world.gust * 4);
+    if (x > 90) x = -90;
+    if (z > 28) z = -190;
+    positions.setX(i, x);
+    positions.setZ(i, z);
   }
+  positions.needsUpdate = true;
 
+  cabinLight.intensity = 1.1 + Math.sin(t * 7) * 0.08;
+  updateScans(dt, t);
   updateHud();
 }
 
-function updateHud() {
-  const scanned = scanTargets.filter(t => t.scanned).length;
-  const seal = 91 - Math.round(wind.gust * 4);
-  const signal = Math.max(23, Math.round(46 + Math.sin(player.z * 0.02) * 18 - wind.gust * 8));
+function updateScans(dt, t) {
+  const center = new THREE.Vector2(0, 0);
+  const projected = new THREE.Vector3();
+  let best = null;
+  let bestScore = 999;
 
+  for (const target of scanTargets) {
+    const scanned = target.userData.scanned;
+    target.children[0].material.opacity = scanned ? 0.025 : 0.11 + Math.sin(t * 3 + target.userData.index) * 0.03;
+    target.children[1].material.opacity = scanned ? 0.13 : 0.75 + Math.sin(t * 4 + target.userData.index) * 0.07;
+    target.rotation.y += dt * 0.45;
+
+    projected.copy(target.position).project(camera);
+    const score = projected.distanceTo(new THREE.Vector3(center.x, center.y, projected.z));
+    const distance = target.position.distanceTo(camera.position);
+    if (!scanned && projected.z < 1 && distance < 95 && score < 0.13 && score < bestScore) {
+      best = target;
+      bestScore = score;
+    }
+  }
+
+  if (best) {
+    if (reticleTarget !== best) {
+      reticleTarget = best;
+      scanHold = 0;
+    }
+    scanHold += dt;
+    if (scanHold >= 1.05) {
+      best.userData.scanned = true;
+      log.textContent = `SCAN COMPLETE: ${best.userData.label}. Local map confidence improved.`;
+      scanHold = 0;
+      reticleTarget = null;
+    } else {
+      log.textContent = `SCANNING: ${best.userData.label}`;
+    }
+  } else {
+    reticleTarget = null;
+    scanHold = Math.max(0, scanHold - dt * 2);
+  }
+}
+
+function updateHud() {
+  const scanned = scanTargets.filter(target => target.userData.scanned).length;
+  const seal = Math.round(89 + Math.sin(performance.now() * 0.0017) * 2 - world.gust * 2);
+  const signal = Math.max(18, Math.round(48 - Math.abs(world.position.z) * 0.12 + Math.sin(world.position.x * 0.05) * 8));
   sealText.textContent = `${seal}%`;
   signalText.textContent = `${signal}%`;
   scanText.textContent = `${scanned} / ${scanTargets.length}`;
@@ -377,42 +310,13 @@ function updateHud() {
   scanFill.style.width = `${(scanned / scanTargets.length) * 100}%`;
 }
 
-function frame(now) {
+function render(now) {
   const dt = Math.min(0.033, (now - lastTime) / 1000);
   lastTime = now;
   const t = now / 1000;
-
-  if (running) update(dt);
-  drawSky(t);
-  drawTerrain();
-  drawTargets(dt);
-  drawWind(t);
-  drawCockpit(t);
-
-  requestAnimationFrame(frame);
-}
-
-function attachControls() {
-  window.addEventListener('keydown', event => keys.add(event.key.toLowerCase()));
-  window.addEventListener('keyup', event => keys.delete(event.key.toLowerCase()));
-
-  canvas.addEventListener('pointerdown', event => {
-    pointer.dragging = true;
-    pointer.lastX = event.clientX;
-    pointer.lastY = event.clientY;
-  });
-
-  window.addEventListener('pointerup', () => pointer.dragging = false);
-  window.addEventListener('pointermove', event => {
-    if (!pointer.dragging || event.pointerType === 'touch') return;
-    const dx = event.clientX - pointer.lastX;
-    pointer.lastX = event.clientX;
-    pointer.lastY = event.clientY;
-    player.yaw += dx * 0.004;
-  });
-
-  setupStick(moveStick, touch.move, true);
-  setupStick(lookStick, touch.look, false);
+  if (running) update(dt, t);
+  renderer.render(scene, camera);
+  requestAnimationFrame(render);
 }
 
 function setupStick(element, state, movementStick) {
@@ -421,13 +325,11 @@ function setupStick(element, state, movementStick) {
     state.id = null;
     state.x = 0;
     state.y = 0;
-    state.active = false;
     nub.style.transform = 'translate(0px, 0px)';
   };
 
   element.addEventListener('pointerdown', event => {
     state.id = event.pointerId;
-    state.active = true;
     element.setPointerCapture(event.pointerId);
   });
 
@@ -438,30 +340,91 @@ function setupStick(element, state, movementStick) {
     const cy = rect.top + rect.height / 2;
     const dx = event.clientX - cx;
     const dy = event.clientY - cy;
+    const max = Math.min(38, rect.width * 0.34);
     const len = Math.hypot(dx, dy);
-    const max = Math.min(38, rect.width * 0.32);
     const scale = len > max ? max / len : 1;
     const nx = dx * scale;
     const ny = dy * scale;
     nub.style.transform = `translate(${nx}px, ${ny}px)`;
     state.x = nx / max;
     state.y = movementStick ? -ny / max : 0;
-    if (!movementStick) state.x = nx / max;
   });
 
   element.addEventListener('pointerup', reset);
   element.addEventListener('pointercancel', reset);
+  element.addEventListener('lostpointercapture', reset);
+}
+
+function makeDustTexture() {
+  const textureCanvas = document.createElement('canvas');
+  textureCanvas.width = 256;
+  textureCanvas.height = 256;
+  const c = textureCanvas.getContext('2d');
+  c.fillStyle = '#806653';
+  c.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 6000; i++) {
+    const v = 80 + Math.random() * 70;
+    c.fillStyle = `rgba(${v + 30}, ${v + 12}, ${v}, ${0.08 + Math.random() * 0.12})`;
+    c.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1);
+  }
+  for (let i = 0; i < 60; i++) {
+    c.strokeStyle = `rgba(255,230,205,${0.03 + Math.random() * 0.04})`;
+    c.beginPath();
+    const y = Math.random() * 256;
+    c.moveTo(0, y);
+    c.lineTo(256, y + Math.random() * 18 - 9);
+    c.stroke();
+  }
+  const texture = new THREE.CanvasTexture(textureCanvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(16, 16);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function makePanelTexture() {
+  const textureCanvas = document.createElement('canvas');
+  textureCanvas.width = 256;
+  textureCanvas.height = 128;
+  const c = textureCanvas.getContext('2d');
+  const g = c.createLinearGradient(0, 0, 256, 128);
+  g.addColorStop(0, '#17252c');
+  g.addColorStop(1, '#03090d');
+  c.fillStyle = g;
+  c.fillRect(0, 0, 256, 128);
+  for (let i = 0; i < 220; i++) {
+    c.fillStyle = `rgba(180,230,255,${0.025 + Math.random() * 0.05})`;
+    c.fillRect(Math.random() * 256, Math.random() * 128, Math.random() * 5, 1);
+  }
+  const texture = new THREE.CanvasTexture(textureCanvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2, 2);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function seededRange(seed, min, max) {
+  const x = Math.sin(seed * 999.17) * 43758.5453123;
+  return min + (x - Math.floor(x)) * (max - min);
+}
+
+function resize() {
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
 }
 
 wakeButton.addEventListener('click', () => {
   running = true;
   wakePanel.style.display = 'none';
-  log.textContent = 'WAKE CYCLE COMPLETE: hold the reticle over glowing survey returns to scan them.';
-  updateHud();
+  log.textContent = '3D BUILD ONLINE: hold the reticle over glowing survey returns to scan.';
 });
 
 window.addEventListener('resize', resize);
-resize();
-attachControls();
+setupStick(moveStick, touch.move, true);
+setupStick(lookStick, touch.look, false);
 updateHud();
-requestAnimationFrame(frame);
+requestAnimationFrame(render);
