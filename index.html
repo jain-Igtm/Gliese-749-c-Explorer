@@ -7,17 +7,17 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Gliese-749-c Explorer</title>
-  <link rel="stylesheet" href="src/styles.css?v=mobile-3d-002" />
+  <link rel="stylesheet" href="src/styles.css?v=vehicle-003" />
 </head>
 <body>
   <canvas id="gameCanvas" aria-label="Gliese-749-c Explorer game viewport"></canvas>
 
   <div id="wakePanel" class="overlay">
     <section class="wake-card">
-      <p class="eyebrow">STRAWBERRY GAMES / MOBILE 3D SURFACE PROSPECT</p>
+      <p class="eyebrow">STRAWBERRY GAMES / VEHICLE INTERIOR PASS</p>
       <h1>Gliese-749-c Explorer</h1>
-      <p>You wake inside a survey vehicle half-buried in wind-scoured dust. The planet outside is technically habitable, which is a polite way of saying the instruments cannot legally call it lethal.</p>
-      <p>Hold the reticle over glowing survey returns to scan. Keep moving through the wind and use the vehicle glass as your only clean line of sight.</p>
+      <p>You wake inside a sealed survey vehicle built like military science hardware and trimmed like someone spent illegal money on comfort.</p>
+      <p>The planet outside is brutal. The cabin is not. Armored glass, soft bolsters, a command yoke, glowing diagnostics, and enough luxury trim to make survival feel expensive.</p>
       <p class="controls"><strong>Phone:</strong> left stick moves, right stick turns. This build is mobile-first.</p>
       <button id="wakeButton">Open Eyes</button>
     </section>
@@ -25,8 +25,8 @@
 
   <main id="hud" aria-hidden="true">
     <section class="panel title-panel">
-      <strong>GLIESE-749-c / MOBILE 3D BUILD</strong>
-      <span>Mission Day 001 · vehicle optics online · cabin seal holding</span>
+      <strong>GLIESE-749-c / VEHICLE INTERIOR PASS</strong>
+      <span>Mission Day 001 · armored cabin online · comfort systems holding</span>
     </section>
 
     <section class="panel status-panel">
@@ -36,7 +36,7 @@
       <div class="meter"><div><span>Scans</span><span id="scanText">0 / 6</span></div><i><b id="scanFill"></b></i></div>
     </section>
 
-    <section id="log" class="panel log-panel">3D BUILD: Wake optics waiting for player input.</section>
+    <section id="log" class="panel log-panel">VEHICLE PASS: cabin systems waiting for player input.</section>
     <div class="reticle"></div>
   </main>
 
@@ -45,6 +45,6 @@
     <div id="lookStick" class="stick"><div class="nub"></div></div>
   </div>
 
-  <script type="module" src="src/main.js?v=mobile-3d-002"></script>
+  <script type="module" src="src/main.js?v=vehicle-003"></script>
 </body>
 </html>
