@@ -7,25 +7,25 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Gliese-749-c Explorer</title>
-  <link rel="stylesheet" href="src/styles.css?v=vehicle-003" />
+  <link rel="stylesheet" href="src/styles.css?v=cockpit-visual-004" />
 </head>
 <body>
   <canvas id="gameCanvas" aria-label="Gliese-749-c Explorer game viewport"></canvas>
 
   <div id="wakePanel" class="overlay">
     <section class="wake-card">
-      <p class="eyebrow">STRAWBERRY GAMES / VEHICLE INTERIOR PASS</p>
+      <p class="eyebrow">STRAWBERRY GAMES / COCKPIT VISUAL PASS</p>
       <h1>Gliese-749-c Explorer</h1>
       <p>You wake inside a sealed survey vehicle built like military science hardware and trimmed like someone spent illegal money on comfort.</p>
       <p>The planet outside is brutal. The cabin is not. Armored glass, soft bolsters, a command yoke, glowing diagnostics, and enough luxury trim to make survival feel expensive.</p>
-      <p class="controls"><strong>Phone:</strong> left stick moves, right stick turns. This build is mobile-first.</p>
+      <p class="controls"><strong>Phone:</strong> left stick drives, right stick steers. This build is mobile-first.</p>
       <button id="wakeButton">Open Eyes</button>
     </section>
   </div>
 
   <main id="hud" aria-hidden="true">
     <section class="panel title-panel">
-      <strong>GLIESE-749-c / VEHICLE INTERIOR PASS</strong>
+      <strong>GLIESE-749-c / COCKPIT VISUAL PASS</strong>
       <span>Mission Day 001 · armored cabin online · comfort systems holding</span>
     </section>
 
@@ -36,7 +36,7 @@
       <div class="meter"><div><span>Scans</span><span id="scanText">0 / 6</span></div><i><b id="scanFill"></b></i></div>
     </section>
 
-    <section id="log" class="panel log-panel">VEHICLE PASS: cabin systems waiting for player input.</section>
+    <section id="log" class="panel log-panel">COCKPIT VISUAL PASS: cabin systems waiting for player input.</section>
     <div class="reticle"></div>
   </main>
 
@@ -45,6 +45,6 @@
     <div id="lookStick" class="stick"><div class="nub"></div></div>
   </div>
 
-  <script type="module" src="src/main.js?v=vehicle-003"></script>
+  <script type="module" src="src/main.js?v=cockpit-visual-004"></script>
 </body>
 </html>
