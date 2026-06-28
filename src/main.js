@@ -47,22 +47,14 @@ const player = {
 };
 
 const keys = new Set();
-const pointer = {
-  dragging: false,
-  lastX: 0,
-  lastY: 0
-};
-
+const pointer = { dragging: false, lastX: 0, lastY: 0 };
 const touch = {
   move: { id: null, x: 0, y: 0, active: false },
   look: { id: null, x: 0, y: 0, active: false }
 };
 
-const wind = {
-  phase: 0,
-  load: 0.76,
-  gust: 0
-};
+const wind = { phase: 0, load: 0.76, gust: 0 };
+const scanner = { target: null, hold: 0, required: 1.15 };
 
 const scanTargets = [
   { x: -44, z: -90, label: 'blue-white mineral bloom', scanned: false },
@@ -74,17 +66,17 @@ const scanTargets = [
 ];
 
 const messages = [
-  'COCKPIT LOG: Exterior conditions are survivable under mission definition HZ-3. Comfort was not included in the definition.',
+  'COCKPIT LOG: exterior conditions meet HZ-3 tolerance. That is not the same thing as safe.',
   'Cabin microphones detect sustained grit impact across the forward glass.',
-  'Atmospheric mix remains within tolerance. Filtration system disputes the optimism of that phrase.',
-  'The vehicle frame flexes under lateral wind load. No breach detected.',
-  'Mapping software reports shallow terrain confidence beyond visual range.'
+  'Atmospheric mix remains within tolerance. Filtration system dislikes the wording.',
+  'Vehicle frame flexing under lateral wind load. No breach detected.',
+  'Mapping confidence drops beyond the visible ridge line.'
 ];
 let messageIndex = 0;
 let messageTimer = 0;
 
 function resize() {
-  dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+  dpr = Math.min(window.devicePixelRatio || 1, 1.6);
   w = Math.floor(window.innerWidth);
   h = Math.floor(window.innerHeight);
   canvas.width = Math.floor(w * dpr);
@@ -105,24 +97,24 @@ function terrainHeight(x, z) {
 }
 
 function drawSky(t) {
-  const sky = ctx.createLinearGradient(0, 0, 0, h * 0.68);
-  sky.addColorStop(0, '#07111b');
-  sky.addColorStop(0.48, '#192a31');
-  sky.addColorStop(1, '#785c4d');
+  const sky = ctx.createLinearGradient(0, 0, 0, h * 0.7);
+  sky.addColorStop(0, '#061019');
+  sky.addColorStop(0.46, '#18282f');
+  sky.addColorStop(1, '#755848');
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, w, h);
 
-  const starX = w * (0.66 + Math.sin(player.yaw) * 0.05);
-  const starY = h * 0.24;
-  const glow = ctx.createRadialGradient(starX, starY, 4, starX, starY, h * 0.34);
-  glow.addColorStop(0, 'rgba(255, 198, 168, 0.52)');
-  glow.addColorStop(0.2, 'rgba(255, 138, 96, 0.18)');
+  const starX = w * (0.64 + Math.sin(player.yaw) * 0.07);
+  const starY = h * 0.27;
+  const glow = ctx.createRadialGradient(starX, starY, 2, starX, starY, h * 0.34);
+  glow.addColorStop(0, 'rgba(255, 210, 184, 0.54)');
+  glow.addColorStop(0.16, 'rgba(255, 142, 96, 0.20)');
   glow.addColorStop(1, 'rgba(255, 138, 96, 0)');
   ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, w, h * 0.62);
+  ctx.fillRect(0, 0, w, h * 0.66);
 
-  ctx.globalAlpha = 0.15;
-  for (let i = 0; i < 34; i++) {
+  ctx.globalAlpha = 0.12;
+  for (let i = 0; i < 36; i++) {
     const y = ((i * 47 + t * 18) % (h * 0.62));
     ctx.fillStyle = 'rgba(210, 230, 235, 0.10)';
     ctx.fillRect(0, y, w, 1);
@@ -131,26 +123,26 @@ function drawSky(t) {
 }
 
 function drawTerrain() {
-  const horizon = h * 0.51 + Math.sin(player.bob) * 3;
+  const horizon = h * 0.54 + Math.sin(player.bob) * 2.5;
+  drawDistantRidges(horizon);
 
   for (let y = Math.floor(horizon); y < h; y += 2) {
     const depth = (y - horizon) / Math.max(1, h - horizon);
     const distance = 18 / Math.pow(depth + 0.04, 1.22);
     const leftRay = player.yaw - 0.82;
     const rightRay = player.yaw + 0.82;
-
     const shade = 1 - depth * 0.68;
-    ctx.globalAlpha = 0.93;
-    ctx.fillStyle = depth > 0.45 ? patterns.ground : patterns.darkerGround;
 
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = depth > 0.45 ? patterns.ground : patterns.darkerGround;
     const offset = Math.floor((Math.sin(player.x * 0.04 + y * 0.022) + Math.cos(player.z * 0.02 + y * 0.015)) * 28);
     ctx.save();
     ctx.translate(offset, 0);
     ctx.fillRect(-256, y, w + 512, 2);
     ctx.restore();
 
-    ctx.globalAlpha = 0.18 + depth * 0.2;
-    ctx.fillStyle = `rgba(255, 214, 183, ${0.08 + depth * 0.12})`;
+    ctx.globalAlpha = 0.14 + depth * 0.18;
+    ctx.fillStyle = `rgba(255, 214, 183, ${0.08 + depth * 0.11})`;
     ctx.fillRect(0, y, w, 2);
 
     const ridge = terrainHeight(player.x + Math.sin(leftRay) * distance, player.z + Math.cos(rightRay) * distance);
@@ -162,31 +154,31 @@ function drawTerrain() {
   }
 
   ctx.globalAlpha = 1;
-  drawDistantRidges(horizon);
 }
 
 function drawDistantRidges(horizon) {
-  for (let band = 0; band < 4; band++) {
-    const baseY = horizon - 34 + band * 18;
+  for (let band = 0; band < 5; band++) {
+    const baseY = horizon - 48 + band * 18;
     ctx.beginPath();
     ctx.moveTo(0, h);
-    for (let x = -20; x <= w + 20; x += 12) {
+    for (let x = -20; x <= w + 20; x += 10) {
       const world = (x - w / 2) * 0.02 + player.yaw * 6 + band * 19;
-      const y = baseY + Math.sin(world * 1.7) * (12 + band * 3) + Math.cos(world * 0.8) * 18;
+      const y = baseY + Math.sin(world * 1.7) * (11 + band * 2.5) + Math.cos(world * 0.8) * 17;
       ctx.lineTo(x, y);
     }
     ctx.lineTo(w, h);
     ctx.closePath();
-    ctx.globalAlpha = 0.18 - band * 0.025;
-    ctx.fillStyle = band % 2 ? '#3f3d38' : '#595047';
+    ctx.globalAlpha = 0.20 - band * 0.024;
+    ctx.fillStyle = band % 2 ? '#3f3d38' : '#5b5146';
     ctx.fill();
   }
   ctx.globalAlpha = 1;
 }
 
-function drawTargets() {
-  const horizon = h * 0.51;
-  let nearest = null;
+function drawTargets(dt) {
+  const horizon = h * 0.54;
+  let candidate = null;
+  let bestDistance = Infinity;
 
   for (const target of scanTargets) {
     const dx = target.x - player.x;
@@ -200,21 +192,51 @@ function drawTargets() {
 
     const sx = w / 2 + wrapped * w * 0.62;
     const sy = horizon + 2300 / (distance + 18) + terrainHeight(target.x, target.z) * 0.9;
-    const size = Math.max(15, 1750 / (distance + 28));
+    const size = Math.max(13, 1700 / (distance + 28));
 
-    ctx.globalAlpha = target.scanned ? 0.18 : 0.68;
+    ctx.globalAlpha = target.scanned ? 0.12 : 0.58;
     ctx.drawImage(textures.mineral, sx - size / 2, sy - size / 2, size, size);
 
-    if (!target.scanned && Math.abs(sx - w / 2) < 42 && Math.abs(sy - h / 2) < 80) {
-      nearest = target;
+    if (!target.scanned && Math.abs(sx - w / 2) < 38 && Math.abs(sy - h * 0.49) < 72 && distance < bestDistance) {
+      candidate = target;
+      bestDistance = distance;
     }
   }
 
   ctx.globalAlpha = 1;
-  if (nearest) {
-    nearest.scanned = true;
-    log.textContent = `SCAN COMPLETE: ${nearest.label}. Map confidence improved. Exterior remains unpleasant.`;
+
+  if (!running) return;
+
+  if (candidate) {
+    if (scanner.target !== candidate) {
+      scanner.target = candidate;
+      scanner.hold = 0;
+    }
+    scanner.hold += dt;
+    drawScanRing(scanner.hold / scanner.required);
+    if (scanner.hold >= scanner.required) {
+      candidate.scanned = true;
+      scanner.target = null;
+      scanner.hold = 0;
+      log.textContent = `SCAN COMPLETE: ${candidate.label}. Map confidence improved.`;
+    }
+  } else {
+    scanner.target = null;
+    scanner.hold = Math.max(0, scanner.hold - dt * 2);
   }
+}
+
+function drawScanRing(progress) {
+  const cx = w / 2;
+  const cy = h * 0.49;
+  const radius = 24;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(210, 248, 255, 0.30)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, progress));
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawWind(t) {
@@ -223,15 +245,15 @@ function drawWind(t) {
 
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
-  for (let i = 0; i < 95; i++) {
-    const y = (i * 37 + t * (70 + wind.gust * 95)) % h;
-    const x = (i * 193 + t * 165 + Math.sin(i) * 90) % (w + 260) - 160;
-    const len = 42 + wind.gust * 80 + Math.random() * 24;
-    ctx.globalAlpha = 0.025 + wind.gust * 0.035;
+  for (let i = 0; i < 118; i++) {
+    const y = (i * 37 + t * (84 + wind.gust * 120)) % h;
+    const x = (i * 193 + t * 175 + Math.sin(i) * 90) % (w + 270) - 170;
+    const len = 45 + wind.gust * 92 + Math.random() * 28;
+    ctx.globalAlpha = 0.023 + wind.gust * 0.04;
     ctx.strokeStyle = '#d9eef3';
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.lineTo(x + len, y - 8 - wind.gust * 10);
+    ctx.lineTo(x + len, y - 8 - wind.gust * 12);
     ctx.stroke();
   }
   ctx.restore();
@@ -239,60 +261,69 @@ function drawWind(t) {
 }
 
 function drawCockpit(t) {
-  const bob = Math.sin(player.bob) * 4;
+  const bob = Math.sin(player.bob) * 3;
+  const glassX = w * 0.10;
+  const glassY = h * 0.19;
+  const glassW = w * 0.80;
+  const glassH = h * 0.55;
 
   ctx.save();
   ctx.translate(0, bob);
 
   ctx.fillStyle = patterns.glass;
-  roundedRect(w * 0.14, h * 0.13, w * 0.72, h * 0.58, 26, true, false);
-
+  roundedRect(glassX, glassY, glassW, glassH, 26, true, false);
   ctx.strokeStyle = 'rgba(160, 215, 235, 0.16)';
   ctx.lineWidth = 2;
-  roundedRect(w * 0.14, h * 0.13, w * 0.72, h * 0.58, 26, false, true);
+  roundedRect(glassX, glassY, glassW, glassH, 26, false, true);
+
+  ctx.strokeStyle = 'rgba(160, 215, 235, 0.06)';
+  ctx.lineWidth = 12;
+  roundedRect(glassX - 8, glassY - 8, glassW + 16, glassH + 16, 34, false, true);
 
   ctx.fillStyle = patterns.cockpit;
   ctx.beginPath();
   ctx.moveTo(0, h);
-  ctx.lineTo(0, h * 0.67);
-  ctx.lineTo(w * 0.23, h * 0.72);
-  ctx.lineTo(w * 0.35, h);
+  ctx.lineTo(0, h * 0.70);
+  ctx.lineTo(w * 0.23, h * 0.75);
+  ctx.lineTo(w * 0.34, h);
   ctx.closePath();
   ctx.fill();
 
   ctx.beginPath();
   ctx.moveTo(w, h);
-  ctx.lineTo(w, h * 0.67);
-  ctx.lineTo(w * 0.77, h * 0.72);
-  ctx.lineTo(w * 0.65, h);
+  ctx.lineTo(w, h * 0.70);
+  ctx.lineTo(w * 0.77, h * 0.75);
+  ctx.lineTo(w * 0.66, h);
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillRect(0, h * 0.78, w, h * 0.22);
+  ctx.fillRect(0, h * 0.82, w, h * 0.18);
 
-  ctx.fillStyle = 'rgba(4, 11, 16, 0.82)';
-  roundedRect(w * 0.32, h * 0.79, w * 0.36, h * 0.15, 18, true, false);
+  ctx.fillStyle = 'rgba(4, 11, 16, 0.78)';
+  roundedRect(w * 0.28, h * 0.83, w * 0.44, h * 0.085, 14, true, false);
 
-  drawInstrument(w * 0.37, h * 0.84, 'ATM', 'BREATHABLE*', t);
-  drawInstrument(w * 0.50, h * 0.84, 'WIND', 'SEVERE', t + 10);
-  drawInstrument(w * 0.63, h * 0.84, 'MAP', 'POOR', t + 20);
+  drawInstrument(w * 0.37, h * 0.865, 'ATM', 'OK', t);
+  drawInstrument(w * 0.50, h * 0.865, 'WIND', 'BAD', t + 10);
+  drawInstrument(w * 0.63, h * 0.865, 'MAP', 'LOW', t + 20);
 
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.24)';
   ctx.fillRect(0, 0, w, h);
 
   ctx.restore();
 }
 
 function drawInstrument(x, y, label, value, t) {
+  const boxW = Math.min(76, w * 0.18);
+  const boxH = 46;
   ctx.save();
   ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(92, 222, 255, 0.08)';
-  roundedRect(x - 48, y - 28, 96, 56, 8, true, false);
-  ctx.strokeStyle = 'rgba(150, 236, 255, 0.18)';
-  roundedRect(x - 48, y - 28, 96, 56, 8, false, true);
+  ctx.fillStyle = 'rgba(92, 222, 255, 0.07)';
+  roundedRect(x - boxW / 2, y - boxH / 2, boxW, boxH, 8, true, false);
+  ctx.strokeStyle = 'rgba(150, 236, 255, 0.16)';
+  roundedRect(x - boxW / 2, y - boxH / 2, boxW, boxH, 8, false, true);
   ctx.fillStyle = `rgba(192, 248, 255, ${0.55 + Math.sin(t * 2) * 0.08})`;
   ctx.font = '10px system-ui';
-  ctx.fillText(label, x, y - 6);
+  ctx.fillText(label, x, y - 5);
   ctx.font = '11px system-ui';
   ctx.fillText(value, x, y + 12);
   ctx.restore();
@@ -311,20 +342,20 @@ function roundedRect(x, y, width, height, radius, fill, stroke) {
 }
 
 function update(dt) {
-  const forward = Number(keys.has('w') || keys.has('ArrowUp')) - Number(keys.has('s') || keys.has('ArrowDown')) + touch.move.y;
-  const strafe = Number(keys.has('d') || keys.has('ArrowRight')) - Number(keys.has('a') || keys.has('ArrowLeft')) + touch.move.x;
-
-  const moveSpeed = 34;
+  const forward = touch.move.y;
+  const strafe = touch.move.x;
+  const moveSpeed = 36;
   const sin = Math.sin(player.yaw);
   const cos = Math.cos(player.yaw);
+
   player.x += (sin * forward + cos * strafe) * moveSpeed * dt;
   player.z += (cos * forward - sin * strafe) * moveSpeed * dt;
-  player.yaw += touch.look.x * dt * 1.7;
+  player.yaw += touch.look.x * dt * 1.95;
   player.speed = Math.min(1, Math.abs(forward) + Math.abs(strafe));
-  player.bob += dt * (1.8 + player.speed * 5.8);
+  player.bob += dt * (1.4 + player.speed * 5.6);
 
   messageTimer += dt;
-  if (messageTimer > 7 && running) {
+  if (messageTimer > 8 && running) {
     messageTimer = 0;
     messageIndex = (messageIndex + 1) % messages.length;
     log.textContent = messages[messageIndex];
@@ -354,7 +385,7 @@ function frame(now) {
   if (running) update(dt);
   drawSky(t);
   drawTerrain();
-  drawTargets();
+  drawTargets(dt);
   drawWind(t);
   drawCockpit(t);
 
@@ -408,7 +439,7 @@ function setupStick(element, state, movementStick) {
     const dx = event.clientX - cx;
     const dy = event.clientY - cy;
     const len = Math.hypot(dx, dy);
-    const max = 42;
+    const max = Math.min(38, rect.width * 0.32);
     const scale = len > max ? max / len : 1;
     const nx = dx * scale;
     const ny = dy * scale;
@@ -425,10 +456,12 @@ function setupStick(element, state, movementStick) {
 wakeButton.addEventListener('click', () => {
   running = true;
   wakePanel.style.display = 'none';
-  log.textContent = 'WAKE CYCLE COMPLETE: Vehicle optics restored. Exterior wind remains above advisory threshold.';
+  log.textContent = 'WAKE CYCLE COMPLETE: hold the reticle over glowing survey returns to scan them.';
+  updateHud();
 });
 
 window.addEventListener('resize', resize);
 resize();
 attachControls();
+updateHud();
 requestAnimationFrame(frame);
