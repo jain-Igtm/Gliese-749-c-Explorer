@@ -39,48 +39,51 @@ const rover = {
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x071018);
-scene.fog = new THREE.FogExp2(0x735846, 0.0115);
+scene.fog = new THREE.FogExp2(0x7b604f, 0.0115);
 
-const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 650);
+const camera = new THREE.PerspectiveCamera(73, window.innerWidth / window.innerHeight, 0.1, 650);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-scene.add(new THREE.HemisphereLight(0xbfd8e0, 0x503929, 1.28));
-const star = new THREE.DirectionalLight(0xffb18a, 2.2);
-star.position.set(-40, 60, 28);
-scene.add(star);
+scene.add(new THREE.HemisphereLight(0xbfd8e0, 0x503929, 1.26));
+const sunLight = new THREE.DirectionalLight(0xffb18a, 2.2);
+sunLight.position.set(-40, 60, 28);
+scene.add(sunLight);
 
-const cabinBlue = new THREE.PointLight(0x8eeaff, 2.15, 18);
-cabinBlue.position.set(0, 0.4, 0.2);
+const cabinBlue = new THREE.PointLight(0x8eeaff, 2.3, 18);
+cabinBlue.position.set(0, 0.25, 0.2);
 scene.add(cabinBlue);
 
-const cabinWarm = new THREE.PointLight(0xffb36c, 1.0, 12);
-cabinWarm.position.set(0, -0.7, -0.4);
+const cabinWarm = new THREE.PointLight(0xffb36c, 1.1, 12);
+cabinWarm.position.set(0, -0.75, -0.4);
 scene.add(cabinWarm);
 
 const textures = {
-  dust: textureDust(),
-  armor: texturePanel('#101820', '#03090d', '#8bdfff'),
-  leather: textureLeather('#1b120e', '#6f4a2e'),
-  suede: textureLeather('#29231d', '#8a6547'),
-  metal: textureMetal(),
-  glass: textureGlass(),
-  screen: textureScreen()
+  dust: makeDustTexture(),
+  armor: makePanelTexture('#101820', '#03090d', '#8bdfff'),
+  leather: makeLeatherTexture('#1b120e', '#6f4a2e'),
+  suede: makeLeatherTexture('#29231d', '#8a6547'),
+  metal: makeMetalTexture(),
+  glass: makeGlassTexture(),
+  screen: makeScreenTexture(),
+  quilt: makeQuiltTexture()
 };
 
 const mat = {
   ground: new THREE.MeshStandardMaterial({ color: 0x806653, roughness: 0.96, metalness: 0.02, map: textures.dust }),
   armor: new THREE.MeshStandardMaterial({ color: 0x10191f, roughness: 0.58, metalness: 0.55, map: textures.armor }),
-  leather: new THREE.MeshStandardMaterial({ color: 0x18120f, roughness: 0.78, metalness: 0.05, map: textures.leather }),
+  black: new THREE.MeshStandardMaterial({ color: 0x060a0d, roughness: 0.5, metalness: 0.45, map: textures.armor }),
+  leather: new THREE.MeshStandardMaterial({ color: 0x17110e, roughness: 0.78, metalness: 0.05, map: textures.leather }),
   suede: new THREE.MeshStandardMaterial({ color: 0x29231d, roughness: 0.94, metalness: 0.02, map: textures.suede }),
+  quilt: new THREE.MeshStandardMaterial({ color: 0x18120f, roughness: 0.86, metalness: 0.04, map: textures.quilt }),
   metal: new THREE.MeshStandardMaterial({ color: 0x9a7a51, roughness: 0.36, metalness: 0.84, map: textures.metal }),
   glass: new THREE.MeshStandardMaterial({ color: 0x9bdfff, transparent: true, opacity: 0.16, roughness: 0.12, metalness: 0.06, map: textures.glass, side: THREE.DoubleSide }),
-  screen: new THREE.MeshBasicMaterial({ color: 0x95f2ff, map: textures.screen, transparent: true, opacity: 0.88 }),
-  amber: new THREE.MeshBasicMaterial({ color: 0xffb36c, transparent: true, opacity: 0.70 }),
-  red: new THREE.MeshBasicMaterial({ color: 0xff5f4f, transparent: true, opacity: 0.66 }),
-  cyan: new THREE.MeshBasicMaterial({ color: 0x78eaff, transparent: true, opacity: 0.80 }),
+  screen: new THREE.MeshBasicMaterial({ color: 0x95f2ff, map: textures.screen, transparent: true, opacity: 0.9 }),
+  amber: new THREE.MeshBasicMaterial({ color: 0xffb36c, transparent: true, opacity: 0.78 }),
+  red: new THREE.MeshBasicMaterial({ color: 0xff5f4f, transparent: true, opacity: 0.7 }),
+  cyan: new THREE.MeshBasicMaterial({ color: 0x78eaff, transparent: true, opacity: 0.82 }),
   rockA: new THREE.MeshStandardMaterial({ color: 0x65584d, roughness: 0.92, metalness: 0.02, map: textures.dust }),
   rockB: new THREE.MeshStandardMaterial({ color: 0x403a34, roughness: 0.96, metalness: 0.01, map: textures.dust })
 };
@@ -89,14 +92,14 @@ const terrainChunks = createTerrainChunks();
 const rocks = createRocks();
 const wind = createWind();
 const targets = createTargets();
-createCockpit();
 createSun();
+createCockpit();
 
 function createSun() {
-  const sun = new THREE.Mesh(new THREE.SphereGeometry(11, 32, 16), new THREE.MeshBasicMaterial({ color: 0xff9b76, transparent: true, opacity: 0.85 }));
+  const sun = new THREE.Mesh(new THREE.SphereGeometry(12, 32, 16), new THREE.MeshBasicMaterial({ color: 0xff9b76, transparent: true, opacity: 0.85 }));
   sun.position.set(-80, 54, -180);
   scene.add(sun);
-  const glow = new THREE.Mesh(new THREE.SphereGeometry(28, 32, 16), new THREE.MeshBasicMaterial({ color: 0xff825f, transparent: true, opacity: 0.12 }));
+  const glow = new THREE.Mesh(new THREE.SphereGeometry(32, 32, 16), new THREE.MeshBasicMaterial({ color: 0xff825f, transparent: true, opacity: 0.12 }));
   glow.position.copy(sun.position);
   scene.add(glow);
 }
@@ -166,53 +169,69 @@ function createCockpit() {
   camera.add(cockpit);
   scene.add(camera);
 
-  windshield(cockpit);
+  panoramicGlass(cockpit);
+  roofAndLights(cockpit);
   dashboard(cockpit);
-  steering(cockpit);
-  consoleStack(cockpit);
-  seatEdges(cockpit);
-  sidePanels(cockpit);
-  roofPanel(cockpit);
+  commandYoke(cockpit);
+  centralConsole(cockpit);
+  seatsAndTrim(cockpit);
+  sideSystemPanels(cockpit);
 }
 
-function windshield(c) {
-  const glass = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 3.35), mat.glass);
-  glass.position.set(0, 0.56, -3.55);
-  c.add(glass);
+function panoramicGlass(c) {
+  box(c, [0, 0.64, -3.64, 6.2, 3.2, 0.025, 0, 0, 0], mat.glass);
 
-  box(c, [0, 2.23, -3.34, 6.75, 0.22, 0.30, 0, 0, 0], mat.armor);
-  box(c, [0, -1.04, -3.22, 6.45, 0.26, 0.36, 0, 0, 0], mat.armor);
-  box(c, [-3.24, 0.52, -3.18, 0.28, 3.42, 0.34, 0, 0, -0.06], mat.armor);
-  box(c, [3.24, 0.52, -3.18, 0.28, 3.42, 0.34, 0, 0, 0.06], mat.armor);
+  box(c, [0, 2.25, -3.38, 6.85, 0.24, 0.38, 0, 0, 0], mat.black);
+  box(c, [0, -0.92, -3.25, 6.55, 0.26, 0.42, 0, 0, 0], mat.black);
+  box(c, [-3.25, 0.60, -3.22, 0.30, 3.35, 0.38, 0, 0, -0.10], mat.black);
+  box(c, [3.25, 0.60, -3.22, 0.30, 3.35, 0.38, 0, 0, 0.10], mat.black);
 
-  for (let i = 0; i < 8; i++) {
-    const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.026, 12), mat.metal);
+  box(c, [-1.55, 0.62, -3.18, 0.18, 3.0, 0.24, 0, 0, -0.08], mat.black);
+  box(c, [1.55, 0.62, -3.18, 0.18, 3.0, 0.24, 0, 0, 0.08], mat.black);
+
+  for (let i = 0; i < 10; i++) {
+    const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.026, 12), mat.metal);
     bolt.rotation.x = Math.PI / 2;
-    bolt.position.set(-2.8 + i * 0.8, -0.92, -3.00);
+    bolt.position.set(-3.0 + i * 0.66, -0.78, -3.0);
     c.add(bolt);
   }
 }
 
-function dashboard(c) {
-  box(c, [0, -0.74, -2.18, 6.7, 0.58, 1.16, -0.12, 0, 0], mat.leather);
-  box(c, [0, -0.33, -2.50, 5.75, 0.24, 0.38, 0, 0, 0], mat.armor);
+function roofAndLights(c) {
+  box(c, [0, 2.05, -1.05, 6.4, 0.30, 2.55, 0, 0, 0], mat.suede);
+  box(c, [0, 1.74, -1.34, 1.42, 0.16, 0.76, 0, 0, 0], mat.black);
 
-  box(c, [0, -0.46, -2.15, 3.95, 0.46, 0.045, -0.08, 0, 0], mat.screen);
-  box(c, [-2.33, -0.54, -2.02, 0.84, 0.38, 0.045, -0.08, 0.15, 0], mat.amber);
-  box(c, [2.33, -0.54, -2.02, 0.84, 0.38, 0.045, -0.08, -0.15, 0], mat.amber);
+  for (const side of [-1, 1]) {
+    for (let row = 0; row < 2; row++) {
+      for (let i = 0; i < 4; i++) {
+        box(c, [side * (1.9 + i * 0.14), 1.72 - row * 0.07, -1.74, 0.09, 0.025, 0.06, 0, 0, 0], mat.amber);
+      }
+    }
+  }
 
-  for (let i = 0; i < 12; i++) box(c, [-0.55 + i * 0.10, -0.84, -1.52, 0.06, 0.13, 0.07, 0, 0, 0], mat.armor);
-  for (let i = 0; i < 9; i++) box(c, [-2.15 + i * 0.54, -1.04, -1.55, 0.16, 0.018, 0.018, 0, 0, 0], i % 3 === 0 ? mat.amber : mat.screen);
+  for (let i = 0; i < 5; i++) box(c, [-0.42 + i * 0.21, 1.61, -1.34, 0.08, 0.04, 0.20, 0, 0, 0], i === 2 ? mat.red : mat.amber);
 }
 
-function steering(c) {
+function dashboard(c) {
+  box(c, [0, -0.70, -2.18, 6.65, 0.58, 1.12, -0.10, 0, 0], mat.leather);
+  box(c, [0, -0.28, -2.47, 5.75, 0.24, 0.38, 0, 0, 0], mat.black);
+
+  box(c, [0, -0.40, -2.09, 2.55, 0.78, 0.055, -0.07, 0, 0], mat.screen);
+  box(c, [-2.28, -0.50, -2.01, 0.95, 0.72, 0.055, -0.07, 0.14, 0], mat.screen);
+  box(c, [2.28, -0.50, -2.01, 0.95, 0.72, 0.055, -0.07, -0.14, 0], mat.screen);
+
+  for (let i = 0; i < 12; i++) box(c, [-0.55 + i * 0.10, -0.85, -1.50, 0.06, 0.13, 0.07, 0, 0, 0], mat.black);
+  for (let i = 0; i < 9; i++) box(c, [-2.12 + i * 0.53, -1.03, -1.55, 0.15, 0.018, 0.018, 0, 0, 0], i % 3 === 0 ? mat.amber : mat.screen);
+}
+
+function commandYoke(c) {
   const y = new THREE.Group();
   y.name = 'steeringYoke';
-  y.position.set(0, -0.72, -1.02);
+  y.position.set(-1.18, -0.78, -1.03);
   y.rotation.x = -0.18;
   c.add(y);
 
-  const column = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.14, 0.72, 16), mat.armor);
+  const column = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.14, 0.70, 16), mat.black);
   column.rotation.x = Math.PI / 2;
   column.position.set(0, -0.06, 0.30);
   y.add(column);
@@ -222,42 +241,55 @@ function steering(c) {
   hub.position.set(0, 0, -0.13);
   y.add(hub);
 
-  box(y, [-0.52, 0, -0.13, 0.86, 0.16, 0.15, 0, 0, -0.18], mat.leather);
-  box(y, [0.52, 0, -0.13, 0.86, 0.16, 0.15, 0, 0, 0.18], mat.leather);
-  box(y, [0, 0.20, -0.13, 1.08, 0.10, 0.12, 0, 0, 0], mat.armor);
+  box(y, [-0.52, 0, -0.13, 0.86, 0.16, 0.15, 0, 0, -0.20], mat.leather);
+  box(y, [0.52, 0, -0.13, 0.86, 0.16, 0.15, 0, 0, 0.20], mat.leather);
+  box(y, [0, 0.20, -0.13, 1.08, 0.10, 0.12, 0, 0, 0], mat.black);
   box(y, [-0.72, 0.05, -0.02, 0.11, 0.06, 0.035, 0, 0, 0], mat.red);
   box(y, [0.72, 0.05, -0.02, 0.11, 0.06, 0.035, 0, 0, 0], mat.red);
+
+  for (let i = 0; i < 5; i++) {
+    box(y, [-0.40 + i * 0.20, -0.19, -0.02, 0.07, 0.035, 0.025, 0, 0, 0], i % 2 ? mat.screen : mat.amber);
+  }
 }
 
-function consoleStack(c) {
+function centralConsole(c) {
   const con = new THREE.Group();
-  con.position.set(0, -1.06, -0.42);
-  con.rotation.x = -0.14;
+  con.position.set(0, -1.07, -0.38);
+  con.rotation.x = -0.15;
   c.add(con);
 
-  box(con, [0, 0, 0, 1.28, 0.38, 1.65, 0, 0, 0], mat.leather);
-  box(con, [0, 0.24, -0.07, 1.10, 0.055, 1.20, 0, 0, 0], mat.armor);
-  box(con, [0, 0.30, -0.25, 0.76, 0.035, 0.68, 0, 0, 0], mat.screen);
-  box(con, [0, -0.02, 0.88, 1.28, 0.26, 0.70, 0, 0, 0], mat.suede);
+  box(con, [0, 0.0, 0, 1.34, 0.40, 1.85, 0, 0, 0], mat.leather);
+  box(con, [0, 0.27, -0.36, 1.05, 0.055, 0.82, 0, 0, 0], mat.screen);
+  box(con, [0, 0.23, 0.24, 1.18, 0.06, 0.80, 0, 0, 0], mat.black);
+  box(con, [0, -0.02, 0.96, 1.22, 0.27, 0.75, 0, 0, 0], mat.suede);
 
-  const shifter = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.11, 0.44, 16), mat.metal);
-  shifter.position.set(0.44, 0.50, 0.32);
-  shifter.rotation.z = -0.22;
+  const shifter = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.11, 0.46, 16), mat.metal);
+  shifter.position.set(0.34, 0.50, 0.24);
+  shifter.rotation.z = -0.20;
   con.add(shifter);
   const knob = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 10), mat.leather);
-  knob.position.set(0.50, 0.72, 0.28);
+  knob.position.set(0.39, 0.72, 0.20);
   con.add(knob);
 
   for (let i = 0; i < 8; i++) {
     const button = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.025, 12), i % 2 ? mat.screen : mat.amber);
-    button.position.set(-0.46 + (i % 4) * 0.15, 0.31, 0.34 + Math.floor(i / 4) * 0.16);
+    button.position.set(-0.46 + (i % 4) * 0.15, 0.31, 0.40 + Math.floor(i / 4) * 0.16);
     con.add(button);
   }
+
+  const dialA = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.05, 24), mat.metal);
+  dialA.position.set(0.48, 0.32, 0.62);
+  con.add(dialA);
+  const dialB = dialA.clone();
+  dialB.position.set(0.18, 0.32, 0.62);
+  con.add(dialB);
 }
 
-function seatEdges(c) {
-  seat(c, -2.05, -0.96, -0.38, 0.28);
-  seat(c, 2.05, -0.96, -0.38, -0.28);
+function seatsAndTrim(c) {
+  seat(c, -2.05, -1.02, -0.22, 0.28);
+  seat(c, 2.05, -1.02, -0.22, -0.28);
+  box(c, [0, -1.48, -0.10, 5.9, 0.11, 3.05, 0, 0, 0], mat.black);
+  for (let i = 0; i < 8; i++) box(c, [-1.75 + i * 0.50, -1.39, -0.08, 0.025, 0.016, 2.5, 0, 0, 0], mat.amber);
 }
 
 function seat(c, x, y, z, rot) {
@@ -266,28 +298,22 @@ function seat(c, x, y, z, rot) {
   s.rotation.y = rot;
   c.add(s);
   box(s, [0, -0.18, 0.05, 1.15, 0.34, 1.0, 0, 0, 0], mat.leather);
-  box(s, [0, 0.02, -0.02, 0.93, 0.13, 0.76, 0, 0, 0], mat.suede);
+  box(s, [0, 0.02, -0.02, 0.93, 0.13, 0.76, 0, 0, 0], mat.quilt);
   box(s, [0, 0.62, 0.48, 1.08, 1.22, 0.22, -0.18, 0, 0], mat.leather);
-  box(s, [0, 0.62, 0.34, 0.66, 0.96, 0.04, -0.18, 0, 0], mat.suede);
+  box(s, [0, 0.62, 0.34, 0.66, 0.96, 0.04, -0.18, 0, 0], mat.quilt);
   box(s, [0, 1.33, 0.30, 0.72, 0.30, 0.22, -0.12, 0, 0], mat.leather);
   box(s, [-0.56, 0.55, 0.34, 0.16, 1.02, 0.24, -0.18, 0, 0], mat.leather);
   box(s, [0.56, 0.55, 0.34, 0.16, 1.02, 0.24, -0.18, 0, 0], mat.leather);
   for (let i = 0; i < 4; i++) box(s, [-0.27 + i * 0.18, 0.60, 0.31, 0.025, 0.90, 0.014, -0.18, 0, 0], mat.metal);
 }
 
-function sidePanels(c) {
-  box(c, [-3.05, -0.62, -0.76, 0.48, 0.90, 2.0, 0, -0.10, 0], mat.leather);
-  box(c, [3.05, -0.62, -0.76, 0.48, 0.90, 2.0, 0, 0.10, 0], mat.leather);
-  box(c, [-2.78, -0.38, -1.30, 0.08, 0.08, 1.70, 0, 0, 0], mat.metal);
-  box(c, [2.78, -0.38, -1.30, 0.08, 0.08, 1.70, 0, 0, 0], mat.metal);
-}
-
-function roofPanel(c) {
-  box(c, [0, 2.05, -1.05, 6.2, 0.28, 2.4, 0, 0, 0], mat.suede);
-  box(c, [0, 1.72, -1.35, 1.35, 0.16, 0.70, 0, 0, 0], mat.armor);
-  for (let i = 0; i < 5; i++) box(c, [-0.42 + i * 0.21, 1.61, -1.35, 0.08, 0.04, 0.20, 0, 0, 0], i === 2 ? mat.red : mat.amber);
-  box(c, [0, -1.48, -0.25, 5.9, 0.11, 3.05, 0, 0, 0], mat.armor);
-  for (let i = 0; i < 8; i++) box(c, [-1.75 + i * 0.50, -1.40, -0.22, 0.025, 0.016, 2.5, 0, 0, 0], mat.amber);
+function sideSystemPanels(c) {
+  box(c, [-3.08, -0.58, -0.78, 0.48, 0.92, 2.1, 0, -0.10, 0], mat.leather);
+  box(c, [3.08, -0.58, -0.78, 0.48, 0.92, 2.1, 0, 0.10, 0], mat.leather);
+  box(c, [-2.95, -0.44, -1.25, 0.04, 0.52, 0.78, 0, 0.23, 0], mat.screen);
+  box(c, [2.95, -0.44, -1.25, 0.04, 0.52, 0.78, 0, -0.23, 0], mat.screen);
+  box(c, [-2.78, -0.32, -1.30, 0.08, 0.08, 1.72, 0, 0, 0], mat.metal);
+  box(c, [2.78, -0.32, -1.30, 0.08, 0.08, 1.72, 0, 0, 0], mat.metal);
 }
 
 function box(group, p, material) {
@@ -301,7 +327,7 @@ function box(group, p, material) {
 
 function createWind() {
   const geo = new THREE.BufferGeometry();
-  const count = 950;
+  const count = 980;
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     positions[i * 3] = seeded(i * 3, -90, 90);
@@ -349,9 +375,9 @@ function update(dt, t) {
   input.turnRate += (input.steer * 2.05 - input.turnRate) * Math.min(1, dt * 4.8);
   rover.yaw -= input.turnRate * dt;
 
-  const dir = new THREE.Vector3(Math.sin(rover.yaw), 0, Math.cos(rover.yaw));
+  const forward = new THREE.Vector3(Math.sin(rover.yaw), 0, Math.cos(rover.yaw));
   const side = new THREE.Vector3(Math.cos(rover.yaw), 0, -Math.sin(rover.yaw));
-  const desired = dir.multiplyScalar(-input.throttle * 15.5).add(side.multiplyScalar(input.strafe * 8.5));
+  const desired = forward.multiplyScalar(-input.throttle * 15.5).add(side.multiplyScalar(input.strafe * 8.5));
   rover.vel.lerp(desired, Math.min(1, dt * 2.9));
   rover.pos.addScaledVector(rover.vel, dt);
   rover.speed = rover.vel.length();
@@ -359,14 +385,14 @@ function update(dt, t) {
   updateInfiniteWorld();
   rover.bob = Math.sin(t * 3.8) * Math.min(0.045, rover.speed * 0.005) + Math.sin(rover.pos.x * 0.35 + rover.pos.z * 0.18) * 0.012;
   camera.position.set(rover.pos.x, 1.62 + rover.bob, rover.pos.z);
-  camera.rotation.set(-0.065 + rover.bob * 0.35, rover.yaw, -input.steer * 0.018);
+  camera.rotation.set(-0.07 + rover.bob * 0.35, rover.yaw, -input.steer * 0.018);
 
   const yoke = camera.getObjectByName('steeringYoke');
   if (yoke) yoke.rotation.z = -input.steer * 0.18;
 
   updateWind(dt, t);
-  cabinBlue.intensity = 1.75 + Math.sin(t * 7) * 0.08;
-  cabinWarm.intensity = 0.72 + Math.sin(t * 1.3) * 0.12;
+  cabinBlue.intensity = 1.85 + Math.sin(t * 7) * 0.08;
+  cabinWarm.intensity = 0.82 + Math.sin(t * 1.3) * 0.12;
   updateScans(dt, t);
   updateHud();
 }
@@ -510,8 +536,8 @@ function curve(v) {
   return s * Math.pow(a, 1.35);
 }
 
-function textureDust() {
-  const c = canvasTextureBase(256, 256, '#806653');
+function makeDustTexture() {
+  const c = baseCanvas(256, 256, '#806653');
   const x = c.getContext('2d');
   for (let i = 0; i < 6500; i++) {
     const v = 80 + Math.random() * 70;
@@ -526,11 +552,11 @@ function textureDust() {
     x.lineTo(256, y + Math.random() * 18 - 9);
     x.stroke();
   }
-  return texFrom(c, 16, 16);
+  return textureFrom(c, 16, 16);
 }
 
-function texturePanel(a, b, line) {
-  const c = canvasTextureBase(256, 128, a);
+function makePanelTexture(a, b, line) {
+  const c = baseCanvas(256, 128, a);
   const x = c.getContext('2d');
   const g = x.createLinearGradient(0, 0, 256, 128);
   g.addColorStop(0, a);
@@ -549,11 +575,11 @@ function texturePanel(a, b, line) {
     x.fillStyle = `rgba(${rgb},${0.025 + Math.random() * 0.05})`;
     x.fillRect(Math.random() * 256, Math.random() * 128, Math.random() * 5, 1);
   }
-  return texFrom(c, 2, 2);
+  return textureFrom(c, 2, 2);
 }
 
-function textureLeather(base, stitch) {
-  const c = canvasTextureBase(256, 256, base);
+function makeLeatherTexture(base, stitch) {
+  const c = baseCanvas(256, 256, base);
   const x = c.getContext('2d');
   for (let i = 0; i < 6000; i++) {
     const v = 18 + Math.random() * 48;
@@ -568,11 +594,34 @@ function textureLeather(base, stitch) {
     x.lineTo(px + Math.random() * 16 - 8, 256);
     x.stroke();
   }
-  return texFrom(c, 2, 2);
+  return textureFrom(c, 2, 2);
 }
 
-function textureMetal() {
-  const c = canvasTextureBase(256, 128, '#8d714e');
+function makeQuiltTexture() {
+  const c = baseCanvas(256, 256, '#18120f');
+  const x = c.getContext('2d');
+  for (let i = -256; i < 512; i += 32) {
+    x.strokeStyle = 'rgba(185,135,86,0.26)';
+    x.lineWidth = 2;
+    x.beginPath();
+    x.moveTo(i, 0);
+    x.lineTo(i + 256, 256);
+    x.stroke();
+    x.beginPath();
+    x.moveTo(i + 256, 0);
+    x.lineTo(i, 256);
+    x.stroke();
+  }
+  for (let i = 0; i < 4500; i++) {
+    const v = 18 + Math.random() * 45;
+    x.fillStyle = `rgba(${v + 14}, ${v + 9}, ${v + 5}, ${0.04 + Math.random() * 0.08})`;
+    x.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1);
+  }
+  return textureFrom(c, 2, 2);
+}
+
+function makeMetalTexture() {
+  const c = baseCanvas(256, 128, '#8d714e');
   const x = c.getContext('2d');
   for (let y = 0; y < 128; y++) {
     const v = 120 + Math.random() * 60;
@@ -582,11 +631,11 @@ function textureMetal() {
     x.lineTo(256, y + Math.random() * 2 - 1);
     x.stroke();
   }
-  return texFrom(c, 3, 2);
+  return textureFrom(c, 3, 2);
 }
 
-function textureGlass() {
-  const c = canvasTextureBase(256, 256, 'rgba(0,0,0,0)');
+function makeGlassTexture() {
+  const c = baseCanvas(256, 256, 'rgba(0,0,0,0)');
   const x = c.getContext('2d');
   for (let i = 0; i < 55; i++) {
     x.strokeStyle = `rgba(220,245,255,${0.04 + Math.random() * 0.08})`;
@@ -597,11 +646,11 @@ function textureGlass() {
     x.lineTo(px + Math.random() * 90 - 30, py + Math.random() * 14 - 7);
     x.stroke();
   }
-  return texFrom(c, 2, 2);
+  return textureFrom(c, 2, 2);
 }
 
-function textureScreen() {
-  const c = canvasTextureBase(256, 128, '#03242b');
+function makeScreenTexture() {
+  const c = baseCanvas(256, 128, '#03242b');
   const x = c.getContext('2d');
   for (let y = 0; y < 128; y += 6) {
     x.fillStyle = 'rgba(140,245,255,0.14)';
@@ -611,10 +660,10 @@ function textureScreen() {
     x.fillStyle = i % 3 ? 'rgba(140,245,255,0.45)' : 'rgba(255,180,100,0.45)';
     x.fillRect(Math.random() * 230, Math.random() * 100, 8 + Math.random() * 28, 2 + Math.random() * 5);
   }
-  return texFrom(c, 1, 1);
+  return textureFrom(c, 1, 1);
 }
 
-function canvasTextureBase(w, h, fill) {
+function baseCanvas(w, h, fill) {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
@@ -624,7 +673,7 @@ function canvasTextureBase(w, h, fill) {
   return c;
 }
 
-function texFrom(c, rx, ry) {
+function textureFrom(c, rx, ry) {
   const texture = new THREE.CanvasTexture(c);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
@@ -657,7 +706,7 @@ function resize() {
 wakeButton.addEventListener('click', () => {
   running = true;
   wakePanel.style.display = 'none';
-  log.textContent = 'VISIBLE COCKPIT ONLINE: textured cabin view restored.';
+  log.textContent = 'REFERENCE COCKPIT ONLINE: panoramic cabin, console, yoke, and seats active.';
 });
 
 window.addEventListener('resize', resize);
