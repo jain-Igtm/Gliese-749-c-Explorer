@@ -84,36 +84,36 @@ canvas {
   z-index: 20;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.20), transparent 28%, transparent 60%, rgba(0, 0, 0, 0.38)),
-    radial-gradient(circle at center, transparent 46%, rgba(0, 8, 12, 0.45) 100%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.16), transparent 24%, transparent 70%, rgba(0, 0, 0, 0.26)),
+    radial-gradient(circle at center, transparent 54%, rgba(0, 8, 12, 0.34) 100%);
 }
 
 .panel {
   position: absolute;
-  border: 1px solid rgba(170, 225, 255, 0.22);
-  border-radius: 15px;
-  background: rgba(2, 8, 14, 0.60);
-  backdrop-filter: blur(10px);
+  border: 1px solid rgba(170, 225, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(2, 8, 14, 0.48);
+  backdrop-filter: blur(8px);
   color: #bad4e0;
-  font-size: 11px;
-  line-height: 1.36;
-  box-shadow: inset 0 0 22px rgba(80, 190, 255, 0.04), 0 16px 38px rgba(0, 0, 0, 0.25);
+  font-size: 10px;
+  line-height: 1.3;
+  box-shadow: inset 0 0 18px rgba(80, 190, 255, 0.035), 0 14px 30px rgba(0, 0, 0, 0.22);
 }
 
 .title-panel {
-  top: calc(14px + env(safe-area-inset-top));
+  top: calc(12px + env(safe-area-inset-top));
   left: 14px;
   right: 14px;
-  padding: 12px 14px;
+  padding: 10px 12px;
 }
 
 .title-panel strong {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: #f2fcff;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .title-panel span {
@@ -124,31 +124,29 @@ canvas {
 }
 
 .status-panel {
-  left: 14px;
-  right: 14px;
-  bottom: calc(162px + env(safe-area-inset-bottom));
-  padding: 10px 12px;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  align-items: start;
+  left: 12px;
+  right: auto;
+  top: calc(92px + env(safe-area-inset-top));
+  bottom: auto;
+  width: 132px;
+  padding: 9px 10px;
+  display: block;
 }
 
 .status-panel strong {
-  grid-column: 1 / -1;
   display: block;
   color: #f2fcff;
-  margin-bottom: 0;
+  margin-bottom: 7px;
   letter-spacing: 0.04em;
 }
 
-.meter { margin-top: 2px; }
+.meter { margin-top: 7px; }
 
 .meter div {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .meter span:first-child {
@@ -159,7 +157,7 @@ canvas {
 
 .meter i {
   display: block;
-  height: 6px;
+  height: 5px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   overflow: hidden;
@@ -174,12 +172,12 @@ canvas {
 }
 
 .log-panel {
-  left: 14px;
-  right: 14px;
-  bottom: calc(104px + env(safe-area-inset-bottom));
-  padding: 10px 12px;
-  min-height: 18px;
-  background: rgba(2, 8, 14, 0.58);
+  left: 12px;
+  right: 12px;
+  bottom: calc(128px + env(safe-area-inset-bottom));
+  padding: 8px 10px;
+  min-height: 16px;
+  background: rgba(2, 8, 14, 0.36);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -188,7 +186,7 @@ canvas {
 .reticle {
   position: absolute;
   left: 50%;
-  top: 49%;
+  top: 48%;
   width: 24px;
   height: 24px;
   transform: translate(-50%, -50%);
@@ -217,14 +215,14 @@ canvas {
 .stick {
   position: absolute;
   bottom: calc(18px + env(safe-area-inset-bottom));
-  width: 124px;
-  height: 124px;
-  border-radius: 28px;
-  border: 1px solid rgba(210, 245, 255, 0.20);
+  width: 112px;
+  height: 112px;
+  border-radius: 26px;
+  border: 1px solid rgba(210, 245, 255, 0.18);
   background:
     linear-gradient(135deg, rgba(255, 183, 104, 0.10), transparent 42%),
-    radial-gradient(circle at 50% 50%, rgba(130, 226, 255, 0.15), transparent 38%),
-    rgba(5, 18, 28, 0.34);
+    radial-gradient(circle at 50% 50%, rgba(130, 226, 255, 0.14), transparent 38%),
+    rgba(5, 18, 28, 0.28);
   pointer-events: auto;
   backdrop-filter: blur(7px);
   box-shadow:
@@ -237,9 +235,9 @@ canvas {
 .stick::before {
   content: "";
   position: absolute;
-  inset: 15px;
-  border-radius: 22px;
-  border: 1px solid rgba(190, 235, 255, 0.09);
+  inset: 14px;
+  border-radius: 21px;
+  border: 1px solid rgba(190, 235, 255, 0.08);
 }
 
 .stick::after {
@@ -271,11 +269,11 @@ canvas {
 
 .nub {
   position: absolute;
-  width: 48px;
-  height: 48px;
-  border-radius: 17px;
-  left: 38px;
-  top: 38px;
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  left: 34px;
+  top: 34px;
   background:
     linear-gradient(145deg, rgba(255, 210, 156, 0.28), rgba(112, 226, 255, 0.18)),
     rgba(220, 250, 255, 0.18);
@@ -286,14 +284,14 @@ canvas {
 
 @media (min-width: 761px) {
   .title-panel { max-width: 520px; right: auto; }
-  .status-panel { left: auto; top: 16px; right: 16px; bottom: auto; width: 260px; display: block; }
+  .status-panel { top: 16px; left: auto; right: 16px; width: 260px; }
   .log-panel { width: min(520px, calc(100vw - 32px)); right: auto; bottom: 16px; white-space: normal; }
   .stick { opacity: 0.45; }
 }
 
 @media (max-height: 690px) {
-  .status-panel { bottom: calc(140px + env(safe-area-inset-bottom)); }
+  .status-panel { display: none; }
   .log-panel { display: none; }
-  .stick { width: 110px; height: 110px; border-radius: 25px; }
-  .nub { left: 31px; top: 31px; width: 48px; height: 48px; }
+  .stick { width: 104px; height: 104px; border-radius: 24px; }
+  .nub { left: 30px; top: 30px; width: 44px; height: 44px; }
 }
