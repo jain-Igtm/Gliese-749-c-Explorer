@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Gliese-749-c Explorer</title>
+  <link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+  <canvas id="gameCanvas" aria-label="Gliese-749-c Explorer game viewport"></canvas>
+
+  <div id="wakePanel" class="overlay">
+    <section class="wake-card">
+      <p class="eyebrow">STRAWBERRY GAMES / SURFACE PROSPECT</p>
+      <h1>Gliese-749-c Explorer</h1>
+      <p>You wake inside a survey vehicle half-buried in wind-scoured dust. The atmosphere is technically breathable. The instruments strongly recommend not testing that fact yet.</p>
+      <p>Outside is a habitable-zone world in the most hostile sense of the phrase: pressure within tolerance, chemistry barely acceptable, wind above comfort limits, and visibility cut by mineral grit.</p>
+      <p class="controls"><strong>Desktop:</strong> WASD to move, mouse drag to look. <strong>Phone:</strong> left circle moves, right circle looks.</p>
+      <button id="wakeButton">Open Eyes</button>
+    </section>
+  </div>
+
+  <main id="hud" aria-hidden="true">
+    <section class="panel title-panel">
+      <strong>GLIESE-749-c / Vehicle Interior</strong>
+      <span>Mission Day 001 · emergency wake cycle · cabin seal holding</span>
+    </section>
+
+    <section class="panel status-panel">
+      <strong>SUIT / VEHICLE STATUS</strong>
+      <div class="meter"><div><span>Cabin Seal</span><span id="sealText">91%</span></div><i><b id="sealFill"></b></i></div>
+      <div class="meter"><div><span>Signal</span><span id="signalText">43%</span></div><i><b id="signalFill"></b></i></div>
+      <div class="meter"><div><span>Scans</span><span id="scanText">0 / 6</span></div><i><b id="scanFill"></b></i></div>
+    </section>
+
+    <section id="log" class="panel log-panel">COCKPIT LOG: Exterior conditions are survivable under mission definition HZ-3. Comfort was not included in the definition.</section>
+    <div class="reticle"></div>
+  </main>
+
+  <div id="touchControls" aria-hidden="true">
+    <div id="moveStick" class="stick"><div class="nub"></div></div>
+    <div id="lookStick" class="stick"><div class="nub"></div></div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
