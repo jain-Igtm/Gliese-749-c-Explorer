@@ -7,17 +7,19 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Gliese-749-c Explorer</title>
-  <link rel="stylesheet" href="src/styles.css?v=reference-cockpit-007" />
+  <link rel="stylesheet" href="src/styles.css?v=cockpit-texture-009" />
 </head>
 <body>
   <canvas id="gameCanvas" aria-label="Gliese-749-c Explorer game viewport"></canvas>
 
+  <canvas id="cockpitTexture" aria-hidden="true"></canvas>
+
   <div id="wakePanel" class="overlay">
     <section class="wake-card">
-      <p class="eyebrow">STRAWBERRY GAMES / REFERENCE COCKPIT BUILD</p>
+      <p class="eyebrow">STRAWBERRY GAMES / TEXTURED COCKPIT BUILD</p>
       <h1>Gliese-749-c Explorer</h1>
-      <p>You wake inside a sealed rover cockpit: panoramic armored glass, roof lights, quilted seats, command yoke, central terrain screen, system panels, and a deep center console.</p>
-      <p>The surface outside is still hostile and infinite. The interior now aims for the reference: rugged science vehicle plus luxury car.</p>
+      <p>You wake inside a sealed rover cockpit with a textured interior overlay: panoramic glass, roof lights, quilted seats, command yoke, terrain screen, system panels, and a center console.</p>
+      <p>The world outside stays 3D and infinite. The vehicle interior is now drawn as a mobile-friendly cockpit texture.</p>
       <p class="controls"><strong>Phone:</strong> left stick drives, right stick steers.</p>
       <button id="wakeButton">Open Eyes</button>
     </section>
@@ -25,8 +27,8 @@
 
   <main id="hud" aria-hidden="true">
     <section class="panel title-panel">
-      <strong>GLIESE-749-c / REFERENCE COCKPIT</strong>
-      <span>Mission Day 001 · armored cabin online · comfort systems holding</span>
+      <strong>GLIESE-749-c / COCKPIT TEXTURE</strong>
+      <span>Mission Day 001 · textured cabin overlay · comfort systems holding</span>
     </section>
 
     <section class="panel status-panel">
@@ -36,7 +38,7 @@
       <div class="meter"><div><span>Scans</span><span id="scanText">0 / ∞</span></div><i><b id="scanFill"></b></i></div>
     </section>
 
-    <section id="log" class="panel log-panel">REFERENCE COCKPIT: cabin systems waiting for player input.</section>
+    <section id="log" class="panel log-panel">COCKPIT TEXTURE: cabin systems waiting for player input.</section>
     <div class="reticle"></div>
   </main>
 
@@ -45,6 +47,6 @@
     <div id="lookStick" class="stick"><div class="nub"></div></div>
   </div>
 
-  <script type="module" src="src/main.js?v=reference-cockpit-007"></script>
+  <script type="module" src="src/main.js?v=cockpit-texture-009"></script>
 </body>
 </html>
