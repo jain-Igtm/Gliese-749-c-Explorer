@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Gliese-749-c Explorer</title>
-  <link rel="stylesheet" href="src/styles.css?v=continuity-015" />
+  <link rel="stylesheet" href="src/styles.css?v=seeded-world-016" />
 </head>
 <body>
   <canvas id="gameCanvas" aria-label="Gliese-749-c Explorer game viewport"></canvas>
@@ -15,9 +15,9 @@
 
   <div id="wakePanel" class="overlay">
     <section class="wake-card">
-      <p class="eyebrow">STRAWBERRY GAMES / CONTINUOUS WORLD</p>
+      <p class="eyebrow">STRAWBERRY GAMES / SEEDED WORLD</p>
       <h1>Gliese-749-c Explorer</h1>
-      <p>Infinite world streaming is now based on stable world cells. Roads and structures should continue instead of snapping into a different scene.</p>
+      <p>The infinite surface now uses a deterministic world seed. Terrain, roads, structures, rocks, and survey returns are generated from permanent world coordinates.</p>
       <p class="controls"><strong>Phone:</strong> left pad drives, right pad steers, center buttons scan and brake.</p>
       <button id="wakeButton">Open Eyes</button>
     </section>
@@ -25,8 +25,8 @@
 
   <main id="hud" aria-hidden="true">
     <section class="panel title-panel">
-      <strong>GLIESE-749-c / CONTINUOUS WORLD</strong>
-      <span>Mission Day 001 · stable infinite cells · clear road corridor</span>
+      <strong>GLIESE-749-c / SEEDED WORLD</strong>
+      <span>Seed 749031 · deterministic infinite generation</span>
     </section>
 
     <section class="panel status-panel">
@@ -36,7 +36,7 @@
       <div class="meter"><div><span>Scans</span><span id="scanText">0 / ∞</span></div><i><b id="scanFill"></b></i></div>
     </section>
 
-    <section id="log" class="panel log-panel">ROVER READY: continuous infinite grid active.</section>
+    <section id="log" class="panel log-panel">ROVER READY: deterministic infinite world active.</section>
     <div class="reticle"></div>
   </main>
 
@@ -50,7 +50,7 @@
     <div id="lookStick" class="stick"><div class="nub"></div></div>
   </div>
 
-  <script type="module" src="src/main.js?v=continuity-015"></script>
-  <script src="src/cockpit-texture.js?v=continuity-015"></script>
+  <script type="module" src="src/seeded-world.js?v=seeded-world-016"></script>
+  <script src="src/cockpit-texture.js?v=seeded-world-016"></script>
 </body>
 </html>
