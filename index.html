@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Gliese-749-c Explorer</title>
-  <link rel="stylesheet" href="src/styles.css?v=world-upgrade-013" />
+  <link rel="stylesheet" href="src/styles.css?v=groundfix-014" />
 </head>
 <body>
   <canvas id="gameCanvas" aria-label="Gliese-749-c Explorer game viewport"></canvas>
@@ -25,8 +25,8 @@
 
   <main id="hud" aria-hidden="true">
     <section class="panel title-panel">
-      <strong>GLIESE-749-c / WORLD UPGRADE</strong>
-      <span>Mission Day 001 · stable infinite grid</span>
+      <strong>GLIESE-749-c / GROUND FIX</strong>
+      <span>Mission Day 001 · terrain-following camera active</span>
     </section>
 
     <section class="panel status-panel">
@@ -36,7 +36,7 @@
       <div class="meter"><div><span>Scans</span><span id="scanText">0 / ∞</span></div><i><b id="scanFill"></b></i></div>
     </section>
 
-    <section id="log" class="panel log-panel">ROVER READY: stable world grid active.</section>
+    <section id="log" class="panel log-panel">ROVER READY: terrain-following camera active.</section>
     <div class="reticle"></div>
   </main>
 
@@ -50,7 +50,7 @@
     <div id="lookStick" class="stick"><div class="nub"></div></div>
   </div>
 
-  <script type="module" src="src/main.js?v=world-upgrade-013"></script>
-  <script src="src/cockpit-texture.js?v=world-upgrade-013"></script>
+  <script type="module" src="src/main.js?v=groundfix-014"></script>
+  <script src="src/cockpit-texture.js?v=groundfix-014"></script>
 </body>
 </html>
