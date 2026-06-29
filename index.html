@@ -7,17 +7,18 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Gliese-749-c Explorer</title>
-  <link rel="stylesheet" href="src/styles.css?v=seeded-world-016" />
+  <link rel="stylesheet" href="src/styles.css?v=activity-017" />
 </head>
 <body>
   <canvas id="gameCanvas" aria-label="Gliese-749-c Explorer game viewport"></canvas>
+  <canvas id="activityLayer" aria-hidden="true"></canvas>
   <canvas id="cockpitTexture" aria-hidden="true"></canvas>
 
   <div id="wakePanel" class="overlay">
     <section class="wake-card">
-      <p class="eyebrow">STRAWBERRY GAMES / SEEDED WORLD</p>
+      <p class="eyebrow">STRAWBERRY GAMES / ACTIVITY BUILD</p>
       <h1>Gliese-749-c Explorer</h1>
-      <p>The infinite surface now uses a deterministic world seed. Terrain, roads, structures, rocks, and survey returns are generated from permanent world coordinates.</p>
+      <p>The infinite surface uses a deterministic world seed. A separate activity layer now adds sky traffic, road movement, wildlife silhouettes, construction lights, and distant signal traces.</p>
       <p class="controls"><strong>Phone:</strong> left pad drives, right pad steers, center buttons scan and brake.</p>
       <button id="wakeButton">Open Eyes</button>
     </section>
@@ -25,8 +26,8 @@
 
   <main id="hud" aria-hidden="true">
     <section class="panel title-panel">
-      <strong>GLIESE-749-c / SEEDED WORLD</strong>
-      <span>Seed 749031 · deterministic infinite generation</span>
+      <strong>GLIESE-749-c / ACTIVITY BUILD</strong>
+      <span>Seed 749031 · active frontier traffic layer</span>
     </section>
 
     <section class="panel status-panel">
@@ -36,7 +37,7 @@
       <div class="meter"><div><span>Scans</span><span id="scanText">0 / ∞</span></div><i><b id="scanFill"></b></i></div>
     </section>
 
-    <section id="log" class="panel log-panel">ROVER READY: deterministic infinite world active.</section>
+    <section id="log" class="panel log-panel">ROVER READY: frontier activity layer active.</section>
     <div class="reticle"></div>
   </main>
 
@@ -50,7 +51,8 @@
     <div id="lookStick" class="stick"><div class="nub"></div></div>
   </div>
 
-  <script type="module" src="src/seeded-world.js?v=seeded-world-016"></script>
-  <script src="src/cockpit-texture.js?v=seeded-world-016"></script>
+  <script type="module" src="src/seeded-world.js?v=activity-017"></script>
+  <script src="src/activity-layer.js?v=activity-017"></script>
+  <script src="src/cockpit-texture.js?v=activity-017"></script>
 </body>
 </html>
