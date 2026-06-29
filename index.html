@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Gliese-749-c Explorer</title>
-  <link rel="stylesheet" href="src/styles.css?v=cockpit-texture-009" />
+  <link rel="stylesheet" href="src/styles.css?v=overhaul-011" />
 </head>
 <body>
   <canvas id="gameCanvas" aria-label="Gliese-749-c Explorer game viewport"></canvas>
@@ -15,19 +15,18 @@
 
   <div id="wakePanel" class="overlay">
     <section class="wake-card">
-      <p class="eyebrow">STRAWBERRY GAMES / TEXTURED COCKPIT BUILD</p>
+      <p class="eyebrow">STRAWBERRY GAMES / OVERHAUL BUILD</p>
       <h1>Gliese-749-c Explorer</h1>
-      <p>Textured cockpit overlay build.</p>
-      <p>The world outside stays 3D and infinite. The interior is now drawn as a mobile-friendly cabin texture.</p>
-      <p class="controls"><strong>Phone:</strong> left stick drives, right stick steers.</p>
+      <p>The rover cabin has been rebuilt for mobile play: clearer cockpit mask, cleaner controls, manual scan, better driving feel, and an infinite survey surface outside the glass.</p>
+      <p class="controls"><strong>Phone:</strong> left pad drives, right pad steers, center buttons scan and brake.</p>
       <button id="wakeButton">Open Eyes</button>
     </section>
   </div>
 
   <main id="hud" aria-hidden="true">
     <section class="panel title-panel">
-      <strong>GLIESE-749-c / COCKPIT TEXTURE</strong>
-      <span>Mission Day 001 · textured cabin overlay</span>
+      <strong>GLIESE-749-c / OVERHAUL BUILD</strong>
+      <span>Mission Day 001 · mobile rover systems online</span>
     </section>
 
     <section class="panel status-panel">
@@ -37,16 +36,21 @@
       <div class="meter"><div><span>Scans</span><span id="scanText">0 / ∞</span></div><i><b id="scanFill"></b></i></div>
     </section>
 
-    <section id="log" class="panel log-panel">COCKPIT TEXTURE: ready.</section>
+    <section id="log" class="panel log-panel">ROVER READY: hold SCAN when a survey return is centered.</section>
     <div class="reticle"></div>
   </main>
+
+  <div id="actionControls" aria-hidden="true">
+    <button id="scanButton" class="action-button" type="button">SCAN<br><span>HOLD</span></button>
+    <button id="brakeButton" class="action-button" type="button">BRAKE</button>
+  </div>
 
   <div id="touchControls" aria-hidden="true">
     <div id="moveStick" class="stick"><div class="nub"></div></div>
     <div id="lookStick" class="stick"><div class="nub"></div></div>
   </div>
 
-  <script type="module" src="src/main.js?v=cockpit-texture-009"></script>
-  <script src="src/cockpit-texture.js?v=cockpit-texture-009"></script>
+  <script type="module" src="src/main.js?v=overhaul-011"></script>
+  <script src="src/cockpit-texture.js?v=overhaul-011"></script>
 </body>
 </html>
