@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Gliese-749-c Explorer</title>
-  <link rel="stylesheet" href="src/styles.css?v=groundfix-014" />
+  <link rel="stylesheet" href="src/styles.css?v=continuity-015" />
 </head>
 <body>
   <canvas id="gameCanvas" aria-label="Gliese-749-c Explorer game viewport"></canvas>
@@ -15,9 +15,9 @@
 
   <div id="wakePanel" class="overlay">
     <section class="wake-card">
-      <p class="eyebrow">STRAWBERRY GAMES / WORLD UPGRADE</p>
+      <p class="eyebrow">STRAWBERRY GAMES / CONTINUOUS WORLD</p>
       <h1>Gliese-749-c Explorer</h1>
-      <p>The surface generation has been rebuilt around stable world cells. Roads, terrain features, structures, pylons, pipe runs, towers, and survey returns now stream as one continuous grid.</p>
+      <p>Infinite world streaming is now based on stable world cells. Roads and structures should continue instead of snapping into a different scene.</p>
       <p class="controls"><strong>Phone:</strong> left pad drives, right pad steers, center buttons scan and brake.</p>
       <button id="wakeButton">Open Eyes</button>
     </section>
@@ -25,8 +25,8 @@
 
   <main id="hud" aria-hidden="true">
     <section class="panel title-panel">
-      <strong>GLIESE-749-c / GROUND FIX</strong>
-      <span>Mission Day 001 · terrain-following camera active</span>
+      <strong>GLIESE-749-c / CONTINUOUS WORLD</strong>
+      <span>Mission Day 001 · stable infinite cells · clear road corridor</span>
     </section>
 
     <section class="panel status-panel">
@@ -36,7 +36,7 @@
       <div class="meter"><div><span>Scans</span><span id="scanText">0 / ∞</span></div><i><b id="scanFill"></b></i></div>
     </section>
 
-    <section id="log" class="panel log-panel">ROVER READY: terrain-following camera active.</section>
+    <section id="log" class="panel log-panel">ROVER READY: continuous infinite grid active.</section>
     <div class="reticle"></div>
   </main>
 
@@ -50,7 +50,7 @@
     <div id="lookStick" class="stick"><div class="nub"></div></div>
   </div>
 
-  <script type="module" src="src/main.js?v=groundfix-014"></script>
-  <script src="src/cockpit-texture.js?v=groundfix-014"></script>
+  <script type="module" src="src/main.js?v=continuity-015"></script>
+  <script src="src/cockpit-texture.js?v=continuity-015"></script>
 </body>
 </html>
