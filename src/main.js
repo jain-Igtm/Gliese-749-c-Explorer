@@ -40,14 +40,15 @@ const rover = {
   speed: 0,
   gust: 0.4,
   bob: 0,
-  distance: 0
+  distance: 0,
+  groundY: 0
 };
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x071018);
 scene.fog = new THREE.FogExp2(0x735848, 0.0118);
 
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 820);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.16, 820);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.55));
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -71,10 +72,10 @@ const textures = {
 };
 
 const mat = {
-  ground: new THREE.MeshStandardMaterial({ color: 0x806653, roughness: 0.98, metalness: 0.01, map: textures.dust }),
-  groundDark: new THREE.MeshStandardMaterial({ color: 0x4b3a31, roughness: 1, metalness: 0.01, map: textures.dust }),
-  road: new THREE.MeshStandardMaterial({ color: 0x3c3530, roughness: 0.92, metalness: 0.02, map: textures.road }),
-  roadLine: new THREE.MeshBasicMaterial({ color: 0xbfc3aa, transparent: true, opacity: 0.58 }),
+  ground: new THREE.MeshStandardMaterial({ color: 0x806653, roughness: 0.98, metalness: 0.01, map: textures.dust, side: THREE.DoubleSide }),
+  groundDark: new THREE.MeshStandardMaterial({ color: 0x4b3a31, roughness: 1, metalness: 0.01, map: textures.dust, side: THREE.DoubleSide }),
+  road: new THREE.MeshStandardMaterial({ color: 0x3c3530, roughness: 0.92, metalness: 0.02, map: textures.road, side: THREE.DoubleSide }),
+  roadLine: new THREE.MeshBasicMaterial({ color: 0xbfc3aa, transparent: true, opacity: 0.58, side: THREE.DoubleSide }),
   rockA: new THREE.MeshStandardMaterial({ color: 0x675247, roughness: 0.92, metalness: 0.02, map: textures.rock }),
   rockB: new THREE.MeshStandardMaterial({ color: 0x3d352f, roughness: 0.96, metalness: 0.01, map: textures.rock }),
   metal: new THREE.MeshStandardMaterial({ color: 0x786d62, roughness: 0.58, metalness: 0.58, map: textures.metal }),
@@ -178,6 +179,12 @@ function terrainHeight(x, z) {
   const roadCut = Math.max(0, 1 - road / 11) * 0.65;
   const natural = Math.sin(x * 0.052) * 0.78 + Math.cos(z * 0.041) * 0.88 + Math.sin((x + z) * 0.022) * 0.58;
   return natural * (1 - roadCut) - roadCut * 0.06;
+}
+
+function roverEyeHeight() {
+  const ground = terrainHeight(rover.pos.x, rover.pos.z);
+  rover.groundY += (ground - rover.groundY) * 0.22;
+  return rover.groundY + 1.68 + rover.bob;
 }
 
 function roadCenter(z) {
@@ -438,7 +445,7 @@ function update(dt, t) {
   updateScans(dt, t);
 
   rover.bob = Math.sin(t * 3.6) * Math.min(0.04, rover.speed * 0.0045) + Math.sin(rover.pos.x * 0.28 + rover.pos.z * 0.16) * 0.010;
-  camera.position.set(rover.pos.x, 1.62 + rover.bob, rover.pos.z);
+  camera.position.set(rover.pos.x, roverEyeHeight(), rover.pos.z);
   camera.rotation.set(-0.055 + rover.bob * 0.32, rover.yaw, -input.steer * 0.015);
 
   cabinGlow.intensity = 0.45 + Math.sin(t * 7) * 0.05 + (input.scanning ? 0.35 : 0);
@@ -723,6 +730,7 @@ function resize() {
 wakeButton.addEventListener('click', () => {
   running = true;
   wakePanel.style.display = 'none';
+  rover.groundY = terrainHeight(rover.pos.x, rover.pos.z);
   log.textContent = 'WORLD OVERHAUL ONLINE: road grid and expedition infrastructure detected.';
 });
 
