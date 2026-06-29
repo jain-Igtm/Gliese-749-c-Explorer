@@ -8,10 +8,34 @@ let dpr = 1;
 let startTime = performance.now();
 let active = false;
 
-const skyTraffic = makeItems(8, 1000);
-const roadTraffic = makeItems(10, 2000);
-const wildlife = makeItems(7, 3000);
-const buildLights = makeItems(18, 4000);
+const cargoShips = Array.from({ length: 6 }, (_, i) => ({
+  seed: 1000 + i * 71,
+  lane: seeded(1100 + i, 0.12, 0.36),
+  size: seeded(1200 + i, 62, 118),
+  speed: seeded(1300 + i, 0.018, 0.050),
+  phase: seeded(1400 + i, 0, 1),
+  heightBob: seeded(1500 + i, 5, 18),
+  tilt: seeded(1600 + i, -0.08, 0.08),
+  direction: seeded(1700 + i, 0, 1) > 0.5 ? 1 : -1
+}));
+
+const cargoDrops = Array.from({ length: 10 }, (_, i) => ({
+  seed: 3000 + i * 43,
+  shipIndex: i % 6,
+  phase: seeded(3100 + i, 0, 1),
+  speed: seeded(3200 + i, 0.035, 0.075),
+  drift: seeded(3300 + i, -22, 22),
+  size: seeded(3400 + i, 5, 12)
+}));
+
+const distantShips = Array.from({ length: 5 }, (_, i) => ({
+  seed: 5000 + i * 59,
+  y: seeded(5100 + i, 0.08, 0.22),
+  size: seeded(5200 + i, 18, 42),
+  speed: seeded(5300 + i, 0.010, 0.024),
+  phase: seeded(5400 + i, 0, 1),
+  direction: seeded(5500 + i, 0, 1) > 0.5 ? 1 : -1
+}));
 
 resize();
 window.addEventListener('resize', resize);
@@ -43,149 +67,169 @@ function loop(now) {
 function draw(t, shouldDraw) {
   ctx.clearRect(0, 0, w, h);
   if (!shouldDraw) return;
-  drawBuildLights(t);
-  drawRoadTraffic(t);
-  drawWildlife(t);
-  drawSkyTraffic(t);
-  drawSignalLines(t);
+  drawDistantShips(t);
+  drawCargoDrops(t);
+  drawCargoShips(t);
+  drawEngineWash(t);
 }
 
-function drawBuildLights(t) {
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  for (const item of buildLights) {
-    const pulse = 0.5 + Math.sin(t * item.speed * 16 + item.seed) * 0.5;
-    const x = item.x * w + Math.sin(t * 0.18 + item.seed) * 7;
-    const y = (0.38 + item.y * 0.34) * h;
-    const a = 0.05 + pulse * 0.16;
-    ctx.fillStyle = item.flip ? `rgba(120,235,255,${a})` : `rgba(255,180,95,${a})`;
-    ctx.beginPath();
-    ctx.arc(x, y, 2 + pulse * 2.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = ctx.fillStyle;
-    ctx.beginPath();
-    ctx.moveTo(x, y + 2);
-    ctx.lineTo(x + Math.sin(t + item.seed) * 7, y + 18 + pulse * 14);
-    ctx.stroke();
+function shipPosition(ship, t) {
+  const travel = wrap(ship.phase + t * ship.speed);
+  const dir = ship.direction;
+  const x = dir > 0 ? -w * 0.22 + travel * w * 1.44 : w * 1.22 - travel * w * 1.44;
+  const y = h * ship.lane + Math.sin(t * 0.8 + ship.seed) * ship.heightBob;
+  return { x, y, travel };
+}
+
+function drawCargoShips(t) {
+  for (const ship of cargoShips) {
+    const p = shipPosition(ship, t);
+    const fade = Math.sin(Math.PI * p.travel);
+    const alpha = 0.42 + fade * 0.34;
+    drawShip(p.x, p.y, ship.size, ship.direction, ship.tilt, alpha, t, ship.seed);
   }
+}
+
+function drawShip(x, y, s, dir, tilt, alpha, t, seed) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(dir, 1);
+  ctx.rotate(tilt + Math.sin(t * 0.8 + seed) * 0.018);
+
+  ctx.globalCompositeOperation = 'screen';
+  const glow = ctx.createRadialGradient(0, 0, s * 0.10, 0, 0, s * 1.05);
+  glow.addColorStop(0, `rgba(105,225,255,${alpha * 0.10})`);
+  glow.addColorStop(1, 'rgba(105,225,255,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(-s * 1.1, -s * 0.75, s * 2.2, s * 1.5);
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = `rgba(6,10,14,${alpha})`;
+  ctx.beginPath();
+  ctx.moveTo(s * 1.18, 0);
+  ctx.lineTo(s * 0.52, -s * 0.23);
+  ctx.lineTo(-s * 0.28, -s * 0.34);
+  ctx.lineTo(-s * 1.0, -s * 0.18);
+  ctx.lineTo(-s * 1.18, 0);
+  ctx.lineTo(-s * 1.0, s * 0.18);
+  ctx.lineTo(-s * 0.28, s * 0.34);
+  ctx.lineTo(s * 0.52, s * 0.23);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = `rgba(18,29,35,${alpha})`;
+  roundedRect(-s * 0.72, -s * 0.18, s * 1.25, s * 0.36, s * 0.08);
+  ctx.fill();
+
+  ctx.fillStyle = `rgba(110,235,255,${alpha * 0.85})`;
+  roundedRect(s * 0.25, -s * 0.06, s * 0.34, s * 0.12, s * 0.04);
+  ctx.fill();
+
+  ctx.globalCompositeOperation = 'screen';
+  drawEngine(-s * 1.03, -s * 0.14, s, alpha, t + seed);
+  drawEngine(-s * 1.03, s * 0.14, s, alpha, t + seed + 1.4);
+
+  ctx.fillStyle = `rgba(255,184,92,${alpha * 0.55})`;
+  for (let i = 0; i < 4; i++) {
+    const bx = -s * 0.42 + i * s * 0.24;
+    const by = s * 0.26;
+    ctx.beginPath();
+    ctx.arc(bx, by, Math.max(1.5, s * 0.025), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   ctx.restore();
 }
 
-function drawRoadTraffic(t) {
-  for (const item of roadTraffic) {
-    const travel = wrap(item.phase + t * item.speed * 0.18);
-    const depth = lerp(0.84, 0.38, travel);
-    const scale = lerp(1.55, 0.32, travel);
-    const roadX = w * (0.5 + Math.sin(depth * 6 + ACTIVITY_SEED * 0.001) * 0.10);
-    const x = roadX + (item.x - 0.5) * 55 * scale;
-    const y = h * depth;
-    const a = lerp(0.38, 0.08, travel);
-    const cars = 2 + Math.floor(item.y * 3);
-    for (let i = 0; i < cars; i++) {
-      const xx = x + Math.sin(t + item.seed + i) * 1.5 * scale;
-      const yy = y + i * 8 * scale;
-      roundedRect(xx - 5 * scale, yy - 2 * scale, 10 * scale, 5 * scale, 2 * scale);
-      ctx.fillStyle = `rgba(8,12,14,${a})`;
-      ctx.fill();
-      ctx.fillStyle = `rgba(120,235,255,${a * 0.9})`;
-      ctx.fillRect(xx - 3 * scale, yy - 1 * scale, 1.5 * scale, 1.5 * scale);
-      ctx.fillStyle = `rgba(255,180,90,${a * 0.75})`;
-      ctx.fillRect(xx + 2 * scale, yy - 1 * scale, 1.5 * scale, 1.5 * scale);
-    }
-  }
+function drawEngine(x, y, s, alpha, t) {
+  const pulse = 0.65 + Math.sin(t * 18) * 0.35;
+  const flame = ctx.createRadialGradient(x, y, 1, x - s * 0.30, y, s * 0.38);
+  flame.addColorStop(0, `rgba(120,235,255,${alpha * 0.82})`);
+  flame.addColorStop(0.45, `rgba(90,160,255,${alpha * 0.34 * pulse})`);
+  flame.addColorStop(1, 'rgba(90,160,255,0)');
+  ctx.fillStyle = flame;
+  ctx.fillRect(x - s * 0.44, y - s * 0.18, s * 0.48, s * 0.36);
 }
 
-function drawWildlife(t) {
-  for (const item of wildlife) {
-    const side = item.flip ? 1 : -1;
-    const travel = wrap(item.phase + t * item.speed * 0.12);
-    const baseX = item.flip ? w * 0.82 : w * 0.18;
-    const x = baseX + (travel - 0.5) * w * 0.22 * side;
-    const y = (0.58 + item.y * 0.30) * h + Math.sin(t * 1.7 + item.seed) * 8;
-    const s = 9 + item.x * 14;
-    const a = 0.18 + Math.sin(t * 2 + item.seed) * 0.04;
+function drawCargoDrops(t) {
+  for (const drop of cargoDrops) {
+    const ship = cargoShips[drop.shipIndex];
+    const p = shipPosition(ship, t);
+    const fall = wrap(drop.phase + t * drop.speed);
+    const alpha = Math.sin(Math.PI * fall) * 0.58;
+    if (alpha <= 0.03) continue;
+
+    const x = p.x + drop.drift * fall * ship.direction;
+    const y = p.y + ship.size * 0.22 + fall * h * 0.43;
+    if (y > h * 0.76) continue;
+
     ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(side, 1);
-    ctx.fillStyle = `rgba(7,12,10,${a})`;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, s * 1.15, s * 0.42, Math.sin(t + item.seed) * 0.1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(s * 0.75, -s * 0.14, s * 0.38, s * 0.26, 0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = `rgba(7,12,10,${a})`;
-    ctx.lineWidth = Math.max(1, s * 0.08);
-    for (let i = -2; i <= 2; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * s * 0.28, s * 0.08);
-      ctx.lineTo(i * s * 0.34 + Math.sin(t * 5 + i + item.seed) * s * 0.18, s * 0.58);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-}
-
-function drawSkyTraffic(t) {
-  for (const item of skyTraffic) {
-    const travel = wrap(item.phase + t * item.speed * 0.16);
-    const x = -w * 0.16 + travel * w * 1.32;
-    const y = (0.08 + item.y * 0.26) * h + Math.sin(t * 0.7 + item.seed) * 12;
-    const s = 18 + item.x * 34;
-    const alpha = 0.10 + Math.sin(Math.PI * travel) * 0.25;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(0.08 + (item.x - 0.5) * 0.12);
-    ctx.fillStyle = `rgba(5,9,13,${alpha})`;
-    ctx.beginPath();
-    ctx.moveTo(s * 1.25, 0);
-    ctx.lineTo(-s * 0.4, -s * 0.24);
-    ctx.lineTo(-s * 1.1, -s * 0.78);
-    ctx.lineTo(-s * 0.82, -s * 0.10);
-    ctx.lineTo(-s * 1.1, s * 0.78);
-    ctx.lineTo(-s * 0.4, s * 0.24);
-    ctx.closePath();
-    ctx.fill();
-    if (Math.sin(t * item.speed * 80 + item.seed) > 0.45) {
-      ctx.globalCompositeOperation = 'screen';
-      ctx.fillStyle = `rgba(120,235,255,${alpha})`;
-      ctx.beginPath();
-      ctx.arc(-s * 0.5, -s * 0.55, Math.max(1.5, s * 0.06), 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = `rgba(255,176,90,${alpha})`;
-      ctx.beginPath();
-      ctx.arc(-s * 0.5, s * 0.55, Math.max(1.5, s * 0.06), 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-}
-
-function drawSignalLines(t) {
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  for (let i = 0; i < 7; i++) {
-    const y = h * (0.18 + i * 0.065) + Math.sin(t * 0.4 + i) * 10;
-    const x = wrap(t * (0.015 + i * 0.004) + seeded(8000 + i, 0, 1)) * w;
-    ctx.strokeStyle = `rgba(125,220,255,${0.018 + i * 0.002})`;
+    ctx.globalCompositeOperation = 'screen';
+    ctx.strokeStyle = `rgba(120,235,255,${alpha * 0.35})`;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(x - 50, y);
-    ctx.lineTo(x + 50, y + Math.sin(t + i) * 6);
+    ctx.moveTo(x, p.y + ship.size * 0.18);
+    ctx.lineTo(x - drop.drift * 0.15, y);
     ctx.stroke();
+
+    ctx.fillStyle = `rgba(10,16,19,${alpha * 0.9})`;
+    roundedRect(x - drop.size, y - drop.size * 0.62, drop.size * 2, drop.size * 1.24, drop.size * 0.25);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(255,185,95,${alpha * 0.42})`;
+    ctx.stroke();
+
+    ctx.fillStyle = `rgba(120,235,255,${alpha * 0.75})`;
+    ctx.beginPath();
+    ctx.arc(x, y - drop.size * 0.9, Math.max(1.2, drop.size * 0.22), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
+}
+
+function drawDistantShips(t) {
+  for (const ship of distantShips) {
+    const travel = wrap(ship.phase + t * ship.speed);
+    const x = ship.direction > 0 ? -w * 0.10 + travel * w * 1.20 : w * 1.10 - travel * w * 1.20;
+    const y = h * ship.y + Math.sin(t * 0.6 + ship.seed) * 6;
+    const alpha = 0.15 + Math.sin(Math.PI * travel) * 0.20;
+    drawSmallShip(x, y, ship.size, ship.direction, alpha, t, ship.seed);
+  }
+}
+
+function drawSmallShip(x, y, s, dir, alpha, t, seed) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(dir, 1);
+  ctx.fillStyle = `rgba(4,8,12,${alpha})`;
+  ctx.beginPath();
+  ctx.moveTo(s, 0);
+  ctx.lineTo(-s * 0.55, -s * 0.22);
+  ctx.lineTo(-s * 0.85, 0);
+  ctx.lineTo(-s * 0.55, s * 0.22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = `rgba(120,235,255,${alpha * 0.8})`;
+  ctx.beginPath();
+  ctx.arc(-s * 0.82, 0, Math.max(1.2, s * 0.08), 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
-function makeItems(count, baseSeed) {
-  return Array.from({ length: count }, (_, i) => ({
-    seed: baseSeed + i * 31,
-    x: seeded(baseSeed + i * 11, 0, 1),
-    y: seeded(baseSeed + i * 17, 0, 1),
-    speed: seeded(baseSeed + i * 23, 0.25, 1.0),
-    phase: seeded(baseSeed + i * 29, 0, 1),
-    flip: seeded(baseSeed + i * 37, 0, 1) > 0.5
-  }));
+function drawEngineWash(t) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 6; i++) {
+    const y = h * (0.18 + i * 0.055) + Math.sin(t * 0.5 + i) * 8;
+    const x = wrap(t * (0.018 + i * 0.003) + seeded(7000 + i, 0, 1)) * w;
+    ctx.strokeStyle = `rgba(120,220,255,${0.018 + i * 0.002})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - 65, y);
+    ctx.lineTo(x + 45, y + Math.sin(t + i) * 5);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function roundedRect(x, y, ww, hh, r) {
@@ -200,10 +244,6 @@ function roundedRect(x, y, ww, hh, r) {
 
 function wrap(v) {
   return ((v % 1) + 1) % 1;
-}
-
-function lerp(a, b, t) {
-  return a + (b - a) * t;
 }
 
 function seeded(seed, min, max) {
