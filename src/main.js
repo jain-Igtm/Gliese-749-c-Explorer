@@ -15,12 +15,15 @@ const lookStick = document.getElementById('lookStick');
 const scanButton = document.getElementById('scanButton');
 const brakeButton = document.getElementById('brakeButton');
 
+const CELL = 96;
+const ROAD_CLEARANCE = 22;
 let running = false;
 let lastTime = performance.now();
 let scannedCount = 0;
 let currentTarget = null;
 let scanHold = 0;
 let logTimer = 0;
+let activeCellKey = '';
 
 const input = {
   move: { id: null, x: 0, y: 0 },
@@ -35,30 +38,28 @@ const input = {
 
 const rover = {
   yaw: 0,
-  pos: new THREE.Vector3(0, 1.62, 0),
+  pos: new THREE.Vector3(0, 1.7, 0),
   vel: new THREE.Vector3(),
   speed: 0,
   gust: 0.4,
   bob: 0,
-  distance: 0,
-  groundY: 0
+  groundY: terrainHeight(0, 0)
 };
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x071018);
-scene.fog = new THREE.FogExp2(0x735848, 0.0118);
+scene.fog = new THREE.FogExp2(0x735848, 0.0105);
 
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.16, 820);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.16, 950);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.55));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-scene.add(new THREE.HemisphereLight(0xbfd8e0, 0x503929, 1.26));
-const sunLight = new THREE.DirectionalLight(0xffb18a, 2.45);
-sunLight.position.set(-50, 70, 28);
+scene.add(new THREE.HemisphereLight(0xbfd8e0, 0x503929, 1.3));
+const sunLight = new THREE.DirectionalLight(0xffb18a, 2.5);
+sunLight.position.set(-55, 75, 32);
 scene.add(sunLight);
-
 const cabinGlow = new THREE.PointLight(0x8eeaff, 0.55, 20);
 cabinGlow.position.set(0, 0.4, 0.2);
 scene.add(cabinGlow);
@@ -73,25 +74,21 @@ const textures = {
 
 const mat = {
   ground: new THREE.MeshStandardMaterial({ color: 0x806653, roughness: 0.98, metalness: 0.01, map: textures.dust, side: THREE.DoubleSide }),
-  groundDark: new THREE.MeshStandardMaterial({ color: 0x4b3a31, roughness: 1, metalness: 0.01, map: textures.dust, side: THREE.DoubleSide }),
-  road: new THREE.MeshStandardMaterial({ color: 0x3c3530, roughness: 0.92, metalness: 0.02, map: textures.road, side: THREE.DoubleSide }),
-  roadLine: new THREE.MeshBasicMaterial({ color: 0xbfc3aa, transparent: true, opacity: 0.58, side: THREE.DoubleSide }),
-  rockA: new THREE.MeshStandardMaterial({ color: 0x675247, roughness: 0.92, metalness: 0.02, map: textures.rock }),
-  rockB: new THREE.MeshStandardMaterial({ color: 0x3d352f, roughness: 0.96, metalness: 0.01, map: textures.rock }),
-  metal: new THREE.MeshStandardMaterial({ color: 0x786d62, roughness: 0.58, metalness: 0.58, map: textures.metal }),
-  darkMetal: new THREE.MeshStandardMaterial({ color: 0x161d20, roughness: 0.68, metalness: 0.45, map: textures.metal }),
+  road: new THREE.MeshStandardMaterial({ color: 0x39332e, roughness: 0.94, metalness: 0.02, map: textures.road, side: THREE.DoubleSide }),
+  roadLine: new THREE.MeshBasicMaterial({ color: 0xc8bea0, transparent: true, opacity: 0.56, side: THREE.DoubleSide }),
+  rockA: new THREE.MeshStandardMaterial({ color: 0x685348, roughness: 0.94, metalness: 0.01, map: textures.rock }),
+  rockB: new THREE.MeshStandardMaterial({ color: 0x3b342f, roughness: 0.98, metalness: 0.01, map: textures.rock }),
+  metal: new THREE.MeshStandardMaterial({ color: 0x777069, roughness: 0.58, metalness: 0.60, map: textures.metal }),
+  darkMetal: new THREE.MeshStandardMaterial({ color: 0x151c20, roughness: 0.70, metalness: 0.46, map: textures.metal }),
   panel: new THREE.MeshStandardMaterial({ color: 0x25313a, roughness: 0.62, metalness: 0.38, map: textures.panel }),
-  amber: new THREE.MeshBasicMaterial({ color: 0xffb36c, transparent: true, opacity: 0.78 }),
-  cyan: new THREE.MeshBasicMaterial({ color: 0x78eaff, transparent: true, opacity: 0.82 }),
-  halo: new THREE.MeshBasicMaterial({ color: 0x78eaff, transparent: true, opacity: 0.10, depthWrite: false }),
-  mast: new THREE.MeshStandardMaterial({ color: 0x9adfed, roughness: 0.42, metalness: 0.35 })
+  amber: new THREE.MeshBasicMaterial({ color: 0xffb36c, transparent: true, opacity: 0.76 }),
+  cyan: new THREE.MeshBasicMaterial({ color: 0x78eaff, transparent: true, opacity: 0.84 }),
+  halo: new THREE.MeshBasicMaterial({ color: 0x78eaff, transparent: true, opacity: 0.11, depthWrite: false })
 };
 
-const terrainChunks = createTerrainChunks();
-const roadChunks = createRoadChunks();
-const rocks = createRocks();
-const ridgeGroups = createRidges();
-const infraGroups = createInfrastructure();
+const terrainCells = createTerrainCells();
+const roadCells = createRoadCells();
+const sceneryCells = createSceneryCells();
 const targets = createTargets();
 const wind = createWind();
 createSun();
@@ -100,283 +97,56 @@ setupStick(moveStick, input.move, true);
 setupStick(lookStick, input.look, false);
 setupButton(scanButton, 'scanning');
 setupButton(brakeButton, 'braking');
+updateWorldCells(true);
 updateHud();
 requestAnimationFrame(render);
 
 function createSun() {
   const sun = new THREE.Mesh(new THREE.SphereGeometry(12, 32, 16), new THREE.MeshBasicMaterial({ color: 0xff9b76, transparent: true, opacity: 0.88 }));
-  sun.position.set(-90, 58, -190);
+  sun.position.set(-100, 62, -210);
   scene.add(sun);
-  const glow = new THREE.Mesh(new THREE.SphereGeometry(36, 32, 16), new THREE.MeshBasicMaterial({ color: 0xff825f, transparent: true, opacity: 0.13, depthWrite: false }));
+  const glow = new THREE.Mesh(new THREE.SphereGeometry(40, 32, 16), new THREE.MeshBasicMaterial({ color: 0xff825f, transparent: true, opacity: 0.13, depthWrite: false }));
   glow.position.copy(sun.position);
   scene.add(glow);
 }
 
-function createTerrainChunks() {
-  const chunks = [];
-  const size = 100;
-  for (let gx = -1; gx <= 1; gx++) {
-    for (let gz = -2; gz <= 2; gz++) {
-      const geo = new THREE.PlaneGeometry(size, size, 48, 48);
+function createTerrainCells() {
+  const cells = [];
+  for (let ox = -2; ox <= 2; ox++) {
+    for (let oz = -3; oz <= 2; oz++) {
+      const geo = new THREE.PlaneGeometry(CELL, CELL, 42, 42);
       geo.rotateX(-Math.PI / 2);
       const mesh = new THREE.Mesh(geo, mat.ground);
-      mesh.userData = { gx, gz, size };
-      mesh.position.set(gx * size, 0, gz * size);
-      shapeTerrain(mesh);
+      mesh.userData = { ox, oz, cx: null, cz: null };
       scene.add(mesh);
-      chunks.push(mesh);
+      cells.push(mesh);
     }
   }
-  return chunks;
+  return cells;
 }
 
-function createRoadChunks() {
-  const chunks = [];
-  const size = 100;
-  for (let i = -2; i <= 2; i++) {
+function createRoadCells() {
+  const cells = [];
+  for (let oz = -4; oz <= 3; oz++) {
     const group = new THREE.Group();
-    group.userData = { offset: i, size };
-    const road = new THREE.Mesh(new THREE.PlaneGeometry(10, size * 1.16, 1, 8), mat.road);
-    road.rotation.x = -Math.PI / 2;
-    road.position.y = 0.075;
-    group.add(road);
-
-    for (let j = -4; j <= 4; j++) {
-      const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 6.4), mat.roadLine);
-      dash.rotation.x = -Math.PI / 2;
-      dash.position.set(0, 0.082, j * 12.5);
-      group.add(dash);
-    }
-
-    const shoulderL = new THREE.Mesh(new THREE.PlaneGeometry(0.22, size * 1.12), mat.roadLine);
-    shoulderL.rotation.x = -Math.PI / 2;
-    shoulderL.position.set(-5.6, 0.083, 0);
-    group.add(shoulderL);
-    const shoulderR = shoulderL.clone();
-    shoulderR.position.x = 5.6;
-    group.add(shoulderR);
-
+    group.userData = { oz, cz: null };
     scene.add(group);
-    chunks.push(group);
+    cells.push(group);
   }
-  recycleRoads(chunks);
-  return chunks;
+  return cells;
 }
 
-function shapeTerrain(mesh) {
-  const pos = mesh.geometry.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i) + mesh.position.x;
-    const z = pos.getZ(i) + mesh.position.z;
-    pos.setY(i, terrainHeight(x, z));
-  }
-  pos.needsUpdate = true;
-  mesh.geometry.computeVertexNormals();
-}
-
-function terrainHeight(x, z) {
-  const road = Math.abs(x - roadCenter(z));
-  const roadCut = Math.max(0, 1 - road / 11) * 0.65;
-  const natural = Math.sin(x * 0.052) * 0.78 + Math.cos(z * 0.041) * 0.88 + Math.sin((x + z) * 0.022) * 0.58;
-  return natural * (1 - roadCut) - roadCut * 0.06;
-}
-
-function roverEyeHeight() {
-  const ground = terrainHeight(rover.pos.x, rover.pos.z);
-  rover.groundY += (ground - rover.groundY) * 0.22;
-  return rover.groundY + 1.68 + rover.bob;
-}
-
-function roadCenter(z) {
-  return Math.sin(z * 0.012) * 22 + Math.sin(z * 0.004) * 34;
-}
-
-function createRocks() {
-  const list = [];
-  for (let i = 0; i < 92; i++) {
-    const h = seeded(i * 41, 0.65, 5.6);
-    const r = seeded(i * 19, 0.75, 4.8);
-    const sides = 7 + (i % 3);
-    const geo = new THREE.CylinderGeometry(r * 0.55, r, h, sides, 1);
-    const rock = new THREE.Mesh(geo, i % 2 ? mat.rockA : mat.rockB);
-    rock.userData = { seed: i, h };
-    scene.add(rock);
-    list.push(rock);
-  }
-  recycleRocks(list);
-  return list;
-}
-
-function createRidges() {
-  const groups = [];
-  for (let i = 0; i < 34; i++) {
-    const ridge = new THREE.Group();
-    ridge.userData = { seed: i };
-    for (let j = 0; j < 4; j++) {
-      const block = new THREE.Mesh(new THREE.BoxGeometry(seeded(i * 9 + j, 8, 24), seeded(i * 17 + j, 2.2, 7), seeded(i * 23 + j, 4, 10)), j % 2 ? mat.rockA : mat.rockB);
-      block.position.set(j * seeded(i + j, 5, 12), 0, seeded(i * 5 + j, -5, 5));
-      block.rotation.y = seeded(i * 13 + j, -0.55, 0.55);
-      block.rotation.z = seeded(i * 11 + j, -0.12, 0.12);
-      ridge.add(block);
+function createSceneryCells() {
+  const cells = [];
+  for (let ox = -2; ox <= 2; ox++) {
+    for (let oz = -3; oz <= 2; oz++) {
+      const group = new THREE.Group();
+      group.userData = { ox, oz, cx: null, cz: null };
+      scene.add(group);
+      cells.push(group);
     }
-    scene.add(ridge);
-    groups.push(ridge);
   }
-  recycleRidges(groups);
-  return groups;
-}
-
-function createInfrastructure() {
-  const groups = [];
-  for (let i = 0; i < 36; i++) {
-    const group = new THREE.Group();
-    group.userData = { seed: i, kind: i % 6 };
-    buildInfraGroup(group, i % 6, i);
-    scene.add(group);
-    groups.push(group);
-  }
-  recycleInfrastructure(groups);
-  return groups;
-}
-
-function buildInfraGroup(group, kind, seed) {
-  if (kind === 0) buildMarkerPylon(group, seed);
-  if (kind === 1) buildAntennaCluster(group, seed);
-  if (kind === 2) buildPipeRun(group, seed);
-  if (kind === 3) buildLandingPad(group, seed);
-  if (kind === 4) buildBuriedModule(group, seed);
-  if (kind === 5) buildUtilityMast(group, seed);
-}
-
-function buildMarkerPylon(group, seed) {
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 5.2, 10), mat.darkMetal);
-  mast.position.y = 2.6;
-  group.add(mast);
-  const cap = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.55, 0.38), mat.panel);
-  cap.position.y = 5.3;
-  group.add(cap);
-  const light = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 8), mat.amber);
-  light.position.y = 5.75;
-  group.add(light);
-}
-
-function buildAntennaCluster(group, seed) {
-  for (let i = 0; i < 4; i++) {
-    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.07, seeded(seed + i, 4.2, 8.0), 8), mat.metal);
-    mast.position.set((i - 1.5) * 0.8, mast.geometry.parameters.height / 2, seeded(seed * 4 + i, -0.6, 0.6));
-    group.add(mast);
-    const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.18, 0.12, 18), mat.panel);
-    dish.position.set(mast.position.x, mast.position.y * 1.85, mast.position.z);
-    dish.rotation.x = Math.PI / 2 + seeded(seed + i, -0.22, 0.22);
-    group.add(dish);
-  }
-}
-
-function buildPipeRun(group, seed) {
-  const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 12, 12), mat.darkMetal);
-  pipe.rotation.z = Math.PI / 2;
-  pipe.position.y = 0.55;
-  group.add(pipe);
-  for (let i = -2; i <= 2; i++) {
-    const brace = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.85, 0.22), mat.metal);
-    brace.position.set(i * 2.6, 0.3, 0);
-    group.add(brace);
-  }
-}
-
-function buildLandingPad(group, seed) {
-  const pad = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.8, 0.18, 24), mat.road);
-  pad.position.y = 0.12;
-  group.add(pad);
-  for (let i = 0; i < 4; i++) {
-    const light = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.22), mat.amber);
-    light.position.set(Math.cos(i * Math.PI / 2) * 4.2, 0.28, Math.sin(i * Math.PI / 2) * 4.2);
-    light.rotation.y = i * Math.PI / 2;
-    group.add(light);
-  }
-}
-
-function buildBuriedModule(group, seed) {
-  const shell = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.8, 3.2), mat.panel);
-  shell.position.y = 0.9;
-  shell.rotation.z = seeded(seed, -0.04, 0.04);
-  group.add(shell);
-  const hatch = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 1.0), mat.metal);
-  hatch.position.set(0, 1.86, 0);
-  group.add(hatch);
-}
-
-function buildUtilityMast(group, seed) {
-  const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 7.5, 8), mat.darkMetal);
-  tower.position.y = 3.75;
-  group.add(tower);
-  for (let i = 0; i < 3; i++) {
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(2.4 - i * 0.4, 0.08, 0.08), mat.metal);
-    arm.position.set(0, 4.5 + i * 0.8, 0);
-    arm.rotation.y = i * 0.7;
-    group.add(arm);
-  }
-  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat.cyan);
-  lamp.position.y = 7.9;
-  group.add(lamp);
-}
-
-function recycleRocks(list) {
-  for (const rock of list) {
-    const s = rock.userData.seed;
-    const cellX = Math.floor(rover.pos.x / 100);
-    const cellZ = Math.floor(rover.pos.z / 100);
-    let x = rover.pos.x + seeded(s * 11 + cellZ * 13, -130, 130);
-    let z = rover.pos.z + seeded(s * 17 + cellX * 17, -220, 115);
-    if (Math.abs(x - roadCenter(z)) < 12) x += x < roadCenter(z) ? -18 : 18;
-    rock.position.set(x, terrainHeight(x, z) + rock.userData.h / 2 - 0.35, z);
-    rock.rotation.y = seeded(s * 13 + Math.floor(z), 0, Math.PI);
-    rock.scale.set(seeded(s * 7, 0.75, 1.55), 1, seeded(s * 23, 0.65, 1.45));
-  }
-}
-
-function recycleRidges(groups) {
-  for (const ridge of groups) {
-    const s = ridge.userData.seed;
-    const cellX = Math.floor(rover.pos.x / 120);
-    const cellZ = Math.floor(rover.pos.z / 120);
-    let x = rover.pos.x + seeded(s * 31 + cellZ * 7, -160, 160);
-    let z = rover.pos.z + seeded(s * 37 + cellX * 11, -260, 150);
-    if (Math.abs(x - roadCenter(z)) < 25) x += x < roadCenter(z) ? -35 : 35;
-    ridge.position.set(x, terrainHeight(x, z), z);
-    ridge.rotation.y = seeded(s * 23 + cellX, -0.7, 0.7);
-  }
-}
-
-function recycleInfrastructure(groups) {
-  for (const group of groups) {
-    const s = group.userData.seed;
-    const cellX = Math.floor(rover.pos.x / 130);
-    const cellZ = Math.floor(rover.pos.z / 130);
-    const z = rover.pos.z + seeded(s * 47 + cellX * 19, -260, 120);
-    const side = seeded(s * 17 + cellZ, 0, 1) > 0.5 ? 1 : -1;
-    const offset = seeded(s * 21 + cellZ, 18, 56) * side;
-    const x = roadCenter(z) + offset;
-    group.position.set(x, terrainHeight(x, z), z);
-    group.rotation.y = seeded(s * 9 + cellX, -0.5, 0.5);
-  }
-}
-
-function recycleRoads(chunks) {
-  const size = 100;
-  const centerZ = Math.round(rover.pos.z / size);
-  for (const group of chunks) {
-    const z = (centerZ + group.userData.offset) * size;
-    const x = roadCenter(z);
-    group.position.set(x, terrainHeight(x, z) + 0.035, z);
-    group.rotation.y = roadAngle(z);
-  }
-}
-
-function roadAngle(z) {
-  const a = roadCenter(z - 8);
-  const b = roadCenter(z + 8);
-  return Math.atan2(b - a, 16);
+  return cells;
 }
 
 function createTargets() {
@@ -384,39 +154,284 @@ function createTargets() {
   for (let i = 0; i < 12; i++) {
     const group = new THREE.Group();
     const orb = new THREE.Mesh(new THREE.SphereGeometry(0.44, 16, 10), mat.cyan.clone());
-    const halo = new THREE.Mesh(new THREE.SphereGeometry(1.24, 16, 10), mat.halo.clone());
-    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, 1.15, 8), mat.mast);
+    const halo = new THREE.Mesh(new THREE.SphereGeometry(1.28, 16, 10), mat.halo.clone());
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, 1.15, 8), mat.metal);
     mast.position.y = -0.63;
     group.add(orb, halo, mast);
-    group.userData = { seed: i, label: label(i), scanned: false, visibleScore: 99 };
+    group.userData = { index: i, key: '', scanned: false, label: label(i) };
     scene.add(group);
     list.push(group);
   }
-  recycleTargets(list);
   return list;
 }
 
-function recycleTargets(list) {
-  for (const target of list) {
-    const s = target.userData.seed;
-    const cellX = Math.floor(rover.pos.x / 120);
-    const cellZ = Math.floor(rover.pos.z / 120);
-    const z = rover.pos.z + seeded(s * 53 + cellX * 23, -210, -38);
-    const x = roadCenter(z) + seeded(s * 31 + cellZ * 19, -70, 70);
-    target.position.set(x, terrainHeight(x, z) + 1.35, z);
-    target.userData.scanned = false;
-    target.userData.label = label(Math.abs(Math.floor(x + z + s)));
+function updateWorldCells(force = false) {
+  const cx = Math.floor(rover.pos.x / CELL);
+  const cz = Math.floor(rover.pos.z / CELL);
+  const key = `${cx}:${cz}`;
+  if (!force && key === activeCellKey) return;
+  activeCellKey = key;
+
+  for (const cell of terrainCells) {
+    const ncx = cx + cell.userData.ox;
+    const ncz = cz + cell.userData.oz;
+    if (force || cell.userData.cx !== ncx || cell.userData.cz !== ncz) {
+      cell.userData.cx = ncx;
+      cell.userData.cz = ncz;
+      cell.position.set(ncx * CELL + CELL / 2, 0, ncz * CELL + CELL / 2);
+      shapeTerrainCell(cell);
+    }
+  }
+
+  for (const road of roadCells) {
+    const ncz = cz + road.userData.oz;
+    if (force || road.userData.cz !== ncz) {
+      road.userData.cz = ncz;
+      buildRoadCell(road, ncz);
+    }
+  }
+
+  for (const group of sceneryCells) {
+    const ncx = cx + group.userData.ox;
+    const ncz = cz + group.userData.oz;
+    if (force || group.userData.cx !== ncx || group.userData.cz !== ncz) {
+      group.userData.cx = ncx;
+      group.userData.cz = ncz;
+      buildSceneryCell(group, ncx, ncz);
+    }
+  }
+
+  placeTargets(cx, cz);
+}
+
+function shapeTerrainCell(mesh) {
+  const pos = mesh.geometry.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const wx = pos.getX(i) + mesh.position.x;
+    const wz = pos.getZ(i) + mesh.position.z;
+    pos.setY(i, terrainHeight(wx, wz));
+  }
+  pos.needsUpdate = true;
+  mesh.geometry.computeVertexNormals();
+}
+
+function terrainHeight(x, z) {
+  const roadCut = Math.max(0, 1 - Math.abs(x - roadCenter(z)) / 14) * 0.82;
+  const broad = Math.sin(x * 0.018) * 1.18 + Math.cos(z * 0.016) * 1.05;
+  const fine = Math.sin(x * 0.061) * 0.58 + Math.cos(z * 0.047) * 0.68 + Math.sin((x + z) * 0.024) * 0.42;
+  return (broad + fine) * (1 - roadCut) - roadCut * 0.08;
+}
+
+function roadCenter(z) {
+  return Math.sin(z * 0.010) * 24 + Math.sin(z * 0.0035) * 38;
+}
+
+function roadAngle(z) {
+  return Math.atan2(roadCenter(z + 12) - roadCenter(z - 12), 24);
+}
+
+function distanceToRoad(x, z) {
+  return Math.abs(x - roadCenter(z));
+}
+
+function roverEyeHeight() {
+  const ground = terrainHeight(rover.pos.x, rover.pos.z);
+  rover.groundY += (ground - rover.groundY) * 0.24;
+  return rover.groundY + 1.68 + rover.bob;
+}
+
+function buildRoadCell(group, cz) {
+  group.clear();
+  const z = cz * CELL + CELL / 2;
+  const x = roadCenter(z);
+  group.position.set(x, terrainHeight(x, z) + 0.06, z);
+  group.rotation.y = roadAngle(z);
+
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(12.2, CELL * 1.28, 1, 10), mat.road);
+  road.rotation.x = -Math.PI / 2;
+  group.add(road);
+
+  for (let j = -4; j <= 4; j++) {
+    const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 6.4), mat.roadLine);
+    dash.rotation.x = -Math.PI / 2;
+    dash.position.set(0, 0.012, j * 12.5);
+    group.add(dash);
+  }
+
+  for (const sx of [-6.45, 6.45]) {
+    const shoulder = new THREE.Mesh(new THREE.PlaneGeometry(0.22, CELL * 1.2), mat.roadLine);
+    shoulder.rotation.x = -Math.PI / 2;
+    shoulder.position.set(sx, 0.014, 0);
+    group.add(shoulder);
+  }
+}
+
+function buildSceneryCell(group, cx, cz) {
+  group.clear();
+  group.position.set(cx * CELL, 0, cz * CELL);
+
+  const rockCount = 7 + Math.floor(stableRange(10, cx, cz, 0, 8));
+  for (let i = 0; i < rockCount; i++) {
+    const wx = cx * CELL + stableRange(20 + i, cx, cz, 4, CELL - 4);
+    const wz = cz * CELL + stableRange(40 + i, cx, cz, 4, CELL - 4);
+    if (distanceToRoad(wx, wz) < ROAD_CLEARANCE) continue;
+    addRock(group, wx, wz, cx, cz, i);
+  }
+
+  if (stableChance(90, cx, cz) > 0.44) addInfrastructure(group, cx, cz);
+  if (stableChance(91, cx, cz) > 0.60) addRidge(group, cx, cz);
+}
+
+function addRock(group, wx, wz, cx, cz, i) {
+  const h = stableRange(100 + i, cx, cz, 0.7, 5.3);
+  const r = stableRange(120 + i, cx, cz, 0.7, 4.1);
+  const rock = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.55, r, h, 7 + (i % 3), 1), i % 2 ? mat.rockA : mat.rockB);
+  rock.position.set(wx - cx * CELL, terrainHeight(wx, wz) + h / 2 - 0.35, wz - cz * CELL);
+  rock.rotation.y = stableRange(140 + i, cx, cz, 0, Math.PI);
+  rock.scale.set(stableRange(150 + i, cx, cz, 0.8, 1.5), 1, stableRange(160 + i, cx, cz, 0.7, 1.4));
+  group.add(rock);
+}
+
+function addInfrastructure(group, cx, cz) {
+  let wx = cx * CELL + stableRange(200, cx, cz, 10, CELL - 10);
+  const wz = cz * CELL + stableRange(201, cx, cz, 10, CELL - 10);
+  if (distanceToRoad(wx, wz) < ROAD_CLEARANCE + 8) {
+    wx = roadCenter(wz) + (stableChance(202, cx, cz) > 0.5 ? 1 : -1) * stableRange(203, cx, cz, 32, 54);
+  }
+  const node = new THREE.Group();
+  node.position.set(wx - cx * CELL, terrainHeight(wx, wz), wz - cz * CELL);
+  node.rotation.y = stableRange(204, cx, cz, -0.6, 0.6);
+  group.add(node);
+
+  const kind = Math.floor(stableRange(205, cx, cz, 0, 6));
+  if (kind === 0) markerPylon(node);
+  else if (kind === 1) antennaCluster(node, cx, cz);
+  else if (kind === 2) pipeRun(node);
+  else if (kind === 3) landingPad(node);
+  else if (kind === 4) buriedModule(node);
+  else utilityMast(node);
+}
+
+function markerPylon(node) {
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.23, 5.5, 10), mat.darkMetal);
+  mast.position.y = 2.75;
+  node.add(mast);
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.55, 0.42), mat.panel);
+  cap.position.y = 5.55;
+  node.add(cap);
+  const light = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 8), mat.amber);
+  light.position.y = 6.0;
+  node.add(light);
+}
+
+function antennaCluster(node, cx, cz) {
+  for (let i = 0; i < 5; i++) {
+    const height = stableRange(220 + i, cx, cz, 4.2, 9.5);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.07, height, 8), mat.metal);
+    mast.position.set((i - 2) * 0.75, height / 2, stableRange(230 + i, cx, cz, -0.8, 0.8));
+    node.add(mast);
+    const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.18, 0.12, 18), mat.panel);
+    dish.position.set(mast.position.x, height * 0.84, mast.position.z);
+    dish.rotation.x = Math.PI / 2 + stableRange(240 + i, cx, cz, -0.25, 0.25);
+    node.add(dish);
+  }
+}
+
+function pipeRun(node) {
+  for (let i = 0; i < 3; i++) {
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 13.5, 12), mat.darkMetal);
+    pipe.rotation.z = Math.PI / 2;
+    pipe.position.set(0, 0.55 + i * 0.22, (i - 1) * 0.42);
+    node.add(pipe);
+  }
+  for (let i = -2; i <= 2; i++) {
+    const brace = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.95, 0.22), mat.metal);
+    brace.position.set(i * 2.7, 0.35, 0);
+    node.add(brace);
+  }
+}
+
+function landingPad(node) {
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(6.2, 6.5, 0.18, 28), mat.road);
+  pad.position.y = 0.12;
+  node.add(pad);
+  for (let i = 0; i < 4; i++) {
+    const light = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.08, 0.22), mat.amber);
+    light.position.set(Math.cos(i * Math.PI / 2) * 4.8, 0.28, Math.sin(i * Math.PI / 2) * 4.8);
+    light.rotation.y = i * Math.PI / 2;
+    node.add(light);
+  }
+}
+
+function buriedModule(node) {
+  const shell = new THREE.Mesh(new THREE.BoxGeometry(5.6, 1.9, 3.5), mat.panel);
+  shell.position.y = 0.95;
+  node.add(shell);
+  const hatch = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 1.1), mat.metal);
+  hatch.position.set(0, 1.96, 0);
+  node.add(hatch);
+}
+
+function utilityMast(node) {
+  const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 8.4, 8), mat.darkMetal);
+  tower.position.y = 4.2;
+  node.add(tower);
+  for (let i = 0; i < 3; i++) {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(2.6 - i * 0.4, 0.08, 0.08), mat.metal);
+    arm.position.set(0, 4.8 + i * 0.9, 0);
+    arm.rotation.y = i * 0.7;
+    node.add(arm);
+  }
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.24, 10, 8), mat.cyan);
+  lamp.position.y = 8.55;
+  node.add(lamp);
+}
+
+function addRidge(group, cx, cz) {
+  const rx = stableRange(300, cx, cz, 5, CELL - 5);
+  const rz = stableRange(301, cx, cz, 5, CELL - 5);
+  const wx = cx * CELL + rx;
+  const wz = cz * CELL + rz;
+  if (distanceToRoad(wx, wz) < ROAD_CLEARANCE + 10) return;
+  const ridge = new THREE.Group();
+  ridge.position.set(rx, terrainHeight(wx, wz), rz);
+  ridge.rotation.y = stableRange(302, cx, cz, -0.9, 0.9);
+  group.add(ridge);
+  for (let i = 0; i < 5; i++) {
+    const block = new THREE.Mesh(new THREE.BoxGeometry(stableRange(310 + i, cx, cz, 7, 22), stableRange(320 + i, cx, cz, 1.8, 6.5), stableRange(330 + i, cx, cz, 4, 11)), i % 2 ? mat.rockA : mat.rockB);
+    block.position.set(i * stableRange(340 + i, cx, cz, 4, 10), 1.5, stableRange(350 + i, cx, cz, -5, 5));
+    block.rotation.y = stableRange(360 + i, cx, cz, -0.6, 0.6);
+    block.rotation.z = stableRange(370 + i, cx, cz, -0.12, 0.12);
+    ridge.add(block);
+  }
+}
+
+function placeTargets(cx, cz) {
+  for (const target of targets) {
+    const i = target.userData.index;
+    const tcx = cx + Math.floor(stableRange(500 + i, cx, cz, -2, 3));
+    const tcz = cz + Math.floor(stableRange(520 + i, cx, cz, -4, 1));
+    const key = `${tcx}:${tcz}:${i}`;
+    if (target.userData.key !== key) {
+      let wx = tcx * CELL + stableRange(540 + i, tcx, tcz, 8, CELL - 8);
+      const wz = tcz * CELL + stableRange(560 + i, tcx, tcz, 8, CELL - 8);
+      if (distanceToRoad(wx, wz) < ROAD_CLEARANCE) wx = roadCenter(wz) + (stableChance(570 + i, tcx, tcz) > 0.5 ? 28 : -28);
+      target.position.set(wx, terrainHeight(wx, wz) + 1.35, wz);
+      target.userData.key = key;
+      target.userData.scanned = false;
+      target.userData.label = label(Math.floor(stableRange(580 + i, tcx, tcz, 0, 6)));
+    }
   }
 }
 
 function createWind() {
   const geo = new THREE.BufferGeometry();
-  const count = 1150;
+  const count = 1250;
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
-    positions[i * 3] = seeded(i * 3, -105, 105);
-    positions[i * 3 + 1] = seeded(i * 5, 0.4, 26);
-    positions[i * 3 + 2] = seeded(i * 7, -230, 65);
+    positions[i * 3] = seeded(i * 3, -115, 115);
+    positions[i * 3 + 1] = seeded(i * 5, 0.4, 28);
+    positions[i * 3 + 2] = seeded(i * 7, -250, 75);
   }
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   const points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xd8eef3, size: 0.046, transparent: true, opacity: 0.42, depthWrite: false }));
@@ -433,14 +448,13 @@ function update(dt, t) {
 
   const forward = new THREE.Vector3(Math.sin(rover.yaw), 0, Math.cos(rover.yaw));
   const side = new THREE.Vector3(Math.cos(rover.yaw), 0, -Math.sin(rover.yaw));
-  const desired = forward.multiplyScalar(-input.throttle * 16.8).add(side.multiplyScalar(input.strafe * 7.2));
+  const desired = forward.multiplyScalar(-input.throttle * 17.2).add(side.multiplyScalar(input.strafe * 7.2));
   rover.vel.lerp(desired, Math.min(1, dt * 2.6));
   if (input.braking) rover.vel.multiplyScalar(Math.max(0.08, 1 - dt * 5.6));
   rover.pos.addScaledVector(rover.vel, dt);
   rover.speed = rover.vel.length();
-  rover.distance += rover.speed * dt;
 
-  updateInfiniteWorld();
+  updateWorldCells(false);
   updateWind(dt, t);
   updateScans(dt, t);
 
@@ -452,37 +466,14 @@ function update(dt, t) {
   updateHud();
 }
 
-function updateInfiniteWorld() {
-  const size = 100;
-  const cx = Math.round(rover.pos.x / size);
-  const cz = Math.round(rover.pos.z / size);
-  let moved = false;
-  for (const chunk of terrainChunks) {
-    const nx = (cx + chunk.userData.gx) * size;
-    const nz = (cz + chunk.userData.gz) * size;
-    if (chunk.position.x !== nx || chunk.position.z !== nz) {
-      chunk.position.set(nx, 0, nz);
-      shapeTerrain(chunk);
-      moved = true;
-    }
-  }
-  recycleRoads(roadChunks);
-  if (moved) {
-    recycleRocks(rocks);
-    recycleRidges(ridgeGroups);
-    recycleInfrastructure(infraGroups);
-    recycleTargets(targets);
-  }
-}
-
 function updateWind(dt, t) {
   rover.gust = 0.48 + Math.sin(t * 0.7) * 0.24 + Math.sin(t * 2.1) * 0.08;
   const pos = wind.geometry.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     let x = pos.getX(i) + dt * (14 + rover.gust * 20);
     let z = pos.getZ(i) + dt * (2 + rover.gust * 4);
-    if (x > rover.pos.x + 110) x = rover.pos.x - 110;
-    if (z > rover.pos.z + 70) z = rover.pos.z - 235;
+    if (x > rover.pos.x + 120) x = rover.pos.x - 120;
+    if (z > rover.pos.z + 80) z = rover.pos.z - 255;
     pos.setX(i, x);
     pos.setZ(i, z);
   }
@@ -493,16 +484,14 @@ function updateScans(dt, t) {
   const projected = new THREE.Vector3();
   let best = null;
   let bestScore = 999;
-
   for (const target of targets) {
     target.rotation.y += dt * 0.42;
-    target.children[0].material.opacity = target.userData.scanned ? 0.12 : 0.72 + Math.sin(t * 4 + target.userData.seed) * 0.08;
-    target.children[1].material.opacity = target.userData.scanned ? 0.02 : 0.10 + Math.sin(t * 3 + target.userData.seed) * 0.03;
+    target.children[0].material.opacity = target.userData.scanned ? 0.12 : 0.72 + Math.sin(t * 4 + target.userData.index) * 0.08;
+    target.children[1].material.opacity = target.userData.scanned ? 0.02 : 0.10 + Math.sin(t * 3 + target.userData.index) * 0.03;
     projected.copy(target.position).project(camera);
     const score = Math.hypot(projected.x, projected.y);
     const distance = target.position.distanceTo(camera.position);
-    target.userData.visibleScore = score;
-    if (!target.userData.scanned && projected.z < 1 && distance < 115 && score < 0.16 && score < bestScore) {
+    if (!target.userData.scanned && projected.z < 1 && distance < 125 && score < 0.16 && score < bestScore) {
       best = target;
       bestScore = score;
     }
@@ -539,7 +528,7 @@ function updateScans(dt, t) {
 
 function updateHud() {
   const seal = Math.round(90 + Math.sin(performance.now() * 0.0017) * 2 - rover.gust * 2);
-  const signal = Math.max(17, Math.round(50 + Math.sin(rover.pos.x * 0.05) * 8 - rover.gust * 5));
+  const signal = Math.max(17, Math.round(52 + Math.sin(rover.pos.x * 0.05) * 8 - rover.gust * 5));
   sealText.textContent = `${seal}%`;
   signalText.textContent = `${signal}%`;
   scanText.textContent = `${scannedCount} / ∞`;
@@ -551,8 +540,7 @@ function updateHud() {
 function render(now) {
   const dt = Math.min(0.033, (now - lastTime) / 1000);
   lastTime = now;
-  const t = now / 1000;
-  if (running) update(dt, t);
+  if (running) update(dt, now / 1000);
   renderer.render(scene, camera);
   requestAnimationFrame(render);
 }
@@ -623,13 +611,13 @@ function curve(v) {
 function makeDustTexture() {
   const c = baseCanvas(256, 256, '#806653');
   const x = c.getContext('2d');
-  for (let i = 0; i < 6500; i++) {
+  for (let i = 0; i < 7000; i++) {
     const v = 80 + Math.random() * 70;
-    x.fillStyle = `rgba(${v + 30}, ${v + 12}, ${v}, ${0.08 + Math.random() * 0.12})`;
+    x.fillStyle = `rgba(${v + 30}, ${v + 12}, ${v}, ${0.06 + Math.random() * 0.12})`;
     x.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1);
   }
-  for (let i = 0; i < 80; i++) {
-    x.strokeStyle = `rgba(255,230,205,${0.025 + Math.random() * 0.04})`;
+  for (let i = 0; i < 95; i++) {
+    x.strokeStyle = `rgba(255,230,205,${0.02 + Math.random() * 0.04})`;
     x.beginPath();
     const y = Math.random() * 256;
     x.moveTo(0, y);
@@ -642,7 +630,7 @@ function makeDustTexture() {
 function makeRockTexture() {
   const c = baseCanvas(256, 256, '#5b4d42');
   const x = c.getContext('2d');
-  for (let i = 0; i < 3200; i++) {
+  for (let i = 0; i < 3600; i++) {
     const v = 60 + Math.random() * 90;
     x.fillStyle = `rgba(${v}, ${v * 0.85}, ${v * 0.72}, ${0.06 + Math.random() * 0.10})`;
     x.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1);
@@ -653,9 +641,9 @@ function makeRockTexture() {
 function makeRoadTexture() {
   const c = baseCanvas(256, 256, '#3b3530');
   const x = c.getContext('2d');
-  for (let i = 0; i < 2800; i++) {
+  for (let i = 0; i < 3000; i++) {
     const v = 45 + Math.random() * 70;
-    x.fillStyle = `rgba(${v}, ${v * 0.92}, ${v * 0.82}, ${0.06 + Math.random() * 0.11})`;
+    x.fillStyle = `rgba(${v}, ${v * 0.92}, ${v * 0.82}, ${0.055 + Math.random() * 0.11})`;
     x.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 3, 1);
   }
   for (let y = 0; y < 256; y += 18) {
@@ -685,7 +673,7 @@ function makeMetalTexture() {
 function makePanelTexture() {
   const c = baseCanvas(256, 128, '#1a2730');
   const x = c.getContext('2d');
-  for (let i = 0; i < 260; i++) {
+  for (let i = 0; i < 300; i++) {
     x.fillStyle = `rgba(130,210,230,${0.02 + Math.random() * 0.04})`;
     x.fillRect(Math.random() * 256, Math.random() * 128, Math.random() * 5, 1);
   }
@@ -711,9 +699,17 @@ function textureFrom(c, rx, ry) {
   return texture;
 }
 
-function seeded(seed, min, max) {
-  const x = Math.sin(seed * 999.17) * 43758.5453123;
-  return min + (x - Math.floor(x)) * (max - min);
+function stableHash(seed, cx, cz) {
+  return Math.sin(seed * 92821.17 + cx * 374.13 + cz * 918.77) * 43758.5453123;
+}
+
+function stableChance(seed, cx, cz) {
+  const x = stableHash(seed, cx, cz);
+  return x - Math.floor(x);
+}
+
+function stableRange(seed, cx, cz, min, max) {
+  return min + stableChance(seed, cx, cz) * (max - min);
 }
 
 function label(i) {
@@ -731,7 +727,7 @@ wakeButton.addEventListener('click', () => {
   running = true;
   wakePanel.style.display = 'none';
   rover.groundY = terrainHeight(rover.pos.x, rover.pos.z);
-  log.textContent = 'WORLD OVERHAUL ONLINE: road grid and expedition infrastructure detected.';
+  log.textContent = 'CONTINUOUS WORLD ONLINE: infinite cells stable, road corridor clear.';
 });
 
 window.addEventListener('resize', resize);
