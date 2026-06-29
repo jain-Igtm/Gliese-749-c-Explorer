@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Gliese-749-c Explorer</title>
-  <link rel="stylesheet" href="src/styles.css?v=overhaul-011" />
+  <link rel="stylesheet" href="src/styles.css?v=world-overhaul-012" />
 </head>
 <body>
   <canvas id="gameCanvas" aria-label="Gliese-749-c Explorer game viewport"></canvas>
@@ -15,9 +15,9 @@
 
   <div id="wakePanel" class="overlay">
     <section class="wake-card">
-      <p class="eyebrow">STRAWBERRY GAMES / OVERHAUL BUILD</p>
+      <p class="eyebrow">STRAWBERRY GAMES / WORLD OVERHAUL</p>
       <h1>Gliese-749-c Explorer</h1>
-      <p>The rover cabin has been rebuilt for mobile play: clearer cockpit mask, cleaner controls, manual scan, better driving feel, and an infinite survey surface outside the glass.</p>
+      <p>The rover cabin is online. Outside, the infinite survey grid now contains roads, route markers, terrain features, masts, antenna clusters, pipe runs, and abandoned expedition structures.</p>
       <p class="controls"><strong>Phone:</strong> left pad drives, right pad steers, center buttons scan and brake.</p>
       <button id="wakeButton">Open Eyes</button>
     </section>
@@ -25,8 +25,8 @@
 
   <main id="hud" aria-hidden="true">
     <section class="panel title-panel">
-      <strong>GLIESE-749-c / OVERHAUL BUILD</strong>
-      <span>Mission Day 001 · mobile rover systems online</span>
+      <strong>GLIESE-749-c / WORLD OVERHAUL</strong>
+      <span>Mission Day 001 · infinite infrastructure grid online</span>
     </section>
 
     <section class="panel status-panel">
@@ -36,7 +36,7 @@
       <div class="meter"><div><span>Scans</span><span id="scanText">0 / ∞</span></div><i><b id="scanFill"></b></i></div>
     </section>
 
-    <section id="log" class="panel log-panel">ROVER READY: hold SCAN when a survey return is centered.</section>
+    <section id="log" class="panel log-panel">ROVER READY: follow road traces or hold SCAN on survey returns.</section>
     <div class="reticle"></div>
   </main>
 
@@ -50,7 +50,7 @@
     <div id="lookStick" class="stick"><div class="nub"></div></div>
   </div>
 
-  <script type="module" src="src/main.js?v=overhaul-011"></script>
-  <script src="src/cockpit-texture.js?v=overhaul-011"></script>
+  <script type="module" src="src/main.js?v=world-overhaul-012"></script>
+  <script src="src/cockpit-texture.js?v=world-overhaul-012"></script>
 </body>
 </html>
