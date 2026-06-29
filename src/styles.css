@@ -16,8 +16,10 @@ canvas {
   display: block;
   width: 100vw;
   height: 100vh;
-  image-rendering: auto;
 }
+
+#gameCanvas { position: fixed; inset: 0; z-index: 1; }
+#cockpitTexture { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
 
 .overlay {
   position: fixed;
@@ -84,15 +86,15 @@ canvas {
   z-index: 20;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.16), transparent 24%, transparent 70%, rgba(0, 0, 0, 0.26)),
-    radial-gradient(circle at center, transparent 54%, rgba(0, 8, 12, 0.34) 100%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent 24%, transparent 72%, rgba(0, 0, 0, 0.22)),
+    radial-gradient(circle at center, transparent 58%, rgba(0, 8, 12, 0.30) 100%);
 }
 
 .panel {
   position: absolute;
-  border: 1px solid rgba(170, 225, 255, 0.18);
-  border-radius: 14px;
-  background: rgba(2, 8, 14, 0.48);
+  border: 1px solid rgba(170, 225, 255, 0.17);
+  border-radius: 15px;
+  background: rgba(2, 8, 14, 0.46);
   backdrop-filter: blur(8px);
   color: #bad4e0;
   font-size: 10px;
@@ -102,8 +104,8 @@ canvas {
 
 .title-panel {
   top: calc(12px + env(safe-area-inset-top));
-  left: 14px;
-  right: 14px;
+  left: 16px;
+  right: 16px;
   padding: 10px 12px;
 }
 
@@ -124,29 +126,28 @@ canvas {
 }
 
 .status-panel {
-  left: 12px;
-  right: auto;
-  top: calc(92px + env(safe-area-inset-top));
-  bottom: auto;
-  width: 132px;
-  padding: 9px 10px;
-  display: block;
+  left: 16px;
+  right: 16px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 9px;
 }
 
 .status-panel strong {
-  display: block;
+  grid-column: 1 / -1;
   color: #f2fcff;
-  margin-bottom: 7px;
   letter-spacing: 0.04em;
 }
 
-.meter { margin-top: 7px; }
+.meter { margin-top: 0; }
 
 .meter div {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
 .meter span:first-child {
@@ -172,12 +173,12 @@ canvas {
 }
 
 .log-panel {
-  left: 12px;
-  right: 12px;
-  bottom: calc(128px + env(safe-area-inset-bottom));
+  left: 16px;
+  right: 16px;
+  bottom: calc(206px + env(safe-area-inset-bottom));
   padding: 8px 10px;
   min-height: 16px;
-  background: rgba(2, 8, 14, 0.36);
+  background: rgba(2, 8, 14, 0.38);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -186,11 +187,11 @@ canvas {
 .reticle {
   position: absolute;
   left: 50%;
-  top: 48%;
-  width: 24px;
-  height: 24px;
+  top: 45%;
+  width: 25px;
+  height: 25px;
   transform: translate(-50%, -50%);
-  opacity: 0.58;
+  opacity: 0.66;
 }
 
 .reticle::before,
@@ -201,20 +202,22 @@ canvas {
   box-shadow: 0 0 10px rgba(140, 220, 255, 0.72);
 }
 
-.reticle::before { left: 11px; top: 0; width: 2px; height: 24px; }
-.reticle::after { top: 11px; left: 0; height: 2px; width: 24px; }
+.reticle::before { left: 11px; top: 0; width: 2px; height: 25px; }
+.reticle::after { top: 11px; left: 0; height: 2px; width: 25px; }
 
-#touchControls {
+#touchControls,
+#actionControls {
   position: fixed;
   inset: 0;
-  z-index: 30;
-  display: block;
   pointer-events: none;
 }
 
+#touchControls { z-index: 30; }
+#actionControls { z-index: 31; }
+
 .stick {
   position: absolute;
-  bottom: calc(18px + env(safe-area-inset-bottom));
+  bottom: calc(96px + env(safe-area-inset-bottom));
   width: 112px;
   height: 112px;
   border-radius: 26px;
@@ -222,14 +225,13 @@ canvas {
   background:
     linear-gradient(135deg, rgba(255, 183, 104, 0.10), transparent 42%),
     radial-gradient(circle at 50% 50%, rgba(130, 226, 255, 0.14), transparent 38%),
-    rgba(5, 18, 28, 0.28);
+    rgba(5, 18, 28, 0.30);
   pointer-events: auto;
   backdrop-filter: blur(7px);
   box-shadow:
     inset 0 0 24px rgba(80, 200, 255, 0.08),
     inset 0 0 4px rgba(255, 190, 116, 0.11),
     0 10px 35px rgba(0, 0, 0, 0.28);
-  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .stick::before {
@@ -252,19 +254,14 @@ canvas {
   text-transform: uppercase;
 }
 
-#moveStick { left: 22px; }
+#moveStick { left: 28px; }
 #moveStick::after { content: "drive"; }
-#lookStick { right: 22px; }
+#lookStick { right: 28px; }
 #lookStick::after { content: "steer"; }
 
 .stick.active {
   transform: scale(1.035);
   border-color: rgba(255, 196, 126, 0.36);
-  box-shadow:
-    inset 0 0 30px rgba(80, 200, 255, 0.12),
-    inset 0 0 8px rgba(255, 190, 116, 0.18),
-    0 12px 38px rgba(0, 0, 0, 0.32),
-    0 0 24px rgba(120, 222, 255, 0.12);
 }
 
 .nub {
@@ -282,16 +279,45 @@ canvas {
     0 0 20px rgba(120, 220, 255, 0.24);
 }
 
-@media (min-width: 761px) {
-  .title-panel { max-width: 520px; right: auto; }
-  .status-panel { top: 16px; left: auto; right: 16px; width: 260px; }
-  .log-panel { width: min(520px, calc(100vw - 32px)); right: auto; bottom: 16px; white-space: normal; }
-  .stick { opacity: 0.45; }
+#actionControls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: calc(112px + env(safe-area-inset-bottom));
+}
+
+.action-button {
+  min-width: 96px;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid rgba(170, 225, 255, 0.18);
+  background: rgba(2, 8, 14, 0.52);
+  color: rgba(230, 250, 255, 0.86);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 18px rgba(80, 190, 255, 0.04), 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+.action-button span {
+  font-size: 10px;
+  color: rgba(190, 230, 255, 0.58);
+  font-weight: 700;
+}
+
+.action-button.active {
+  border-color: rgba(255, 196, 126, 0.42);
+  box-shadow: 0 0 22px rgba(120, 222, 255, 0.13), inset 0 0 18px rgba(255, 190, 116, 0.12);
 }
 
 @media (max-height: 690px) {
   .status-panel { display: none; }
   .log-panel { display: none; }
-  .stick { width: 104px; height: 104px; border-radius: 24px; }
+  .stick { bottom: calc(28px + env(safe-area-inset-bottom)); width: 104px; height: 104px; border-radius: 24px; }
   .nub { left: 30px; top: 30px; width: 44px; height: 44px; }
+  #actionControls { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+  .action-button { min-width: 82px; min-height: 42px; font-size: 11px; }
 }
